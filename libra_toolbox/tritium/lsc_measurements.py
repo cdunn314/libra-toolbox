@@ -1,30 +1,69 @@
 import pandas as pd
-from typing import List
+from typing import List, Dict
 import pint
+import pint.facets
 from libra_toolbox.tritium import ureg
 from datetime import datetime, timedelta
 import warnings
+from typing import Literal
+
+
+# config
+DATE_FORMAT = "%m/%d/%Y %I:%M %p"
 
 
 class LSCFileReader:
-    def __init__(self, file_path, vial_labels=None):
+    quench_set: str | None
+    data: pd.DataFrame | None
+
+    def __init__(
+        self,
+        file_path: str,
+        vial_labels: List[str | None] = None,
+        labels_column: str = None,
+    ):
+        """Reads a LSC file and extracts the Bq:1 values and labels
+
+        Args:
+            file_path: Path to the LSC file.
+            vial_labels: List of vial labels. Defaults to None.
+            labels_column: Column name in the file that contains the vial labels. Defaults to None.
+        """
         self.file_path = file_path
         self.vial_labels = vial_labels
+        self.labels_column = labels_column
         self.data = None
         self.header_content = None
+        self.quench_set = None
 
     def read_file(self):
+        """
+        Reads the LSC file and extracts the data in self.data and the vial labels
+        (if provided) in self.vial_labels
+
+        Raises:
+            ValueError: If both vial_labels and labels_column are provided or if none of them are provided
+        """
+
+        # check if vial_labels or labels_column is provided
+        if (self.labels_column is None and self.vial_labels is None) or (
+            self.labels_column is not None and self.vial_labels is not None
+        ):
+            raise ValueError("Provide either vial_labels or labels_column")
+
         # first read the file without dataframe to find the line starting with S#
         header_lines = []
         with open(self.file_path, "r") as file:
             lines = file.readlines()
             for i, line in enumerate(lines):
+                if line.startswith("Quench Set:"):
+                    quench_set_line_idx = i + 1
                 if line.startswith("S#"):
                     start = i
                     break
                 header_lines.append(line)
         self.header_content = "".join(header_lines)
-
+        self.quench_set = lines[quench_set_line_idx].strip()
         # read the file with dataframe starting from the line with S#
         self.data = pd.read_csv(self.file_path, skiprows=start)
 
@@ -34,10 +73,22 @@ class LSCFileReader:
                 "There seem to be an issue with the last column. Is the format of the file correct?"
             )
 
-    def get_bq1_values(self):
+        if self.labels_column is not None:
+            self.vial_labels = self.data[self.labels_column].tolist()
+
+    def get_bq1_values(self) -> List[float]:
+        assert self.data is not None
         return self.data["Bq:1"].tolist()
 
-    def get_bq1_values_with_labels(self):
+    def get_bq1_values_with_labels(self) -> Dict[str | None, float]:
+        """Returns a dictionary with vial labels as keys and Bq:1 values as values
+
+        Raises:
+            ValueError: If vial labels are not provided
+
+        Returns:
+            Dictionary with vial labels as keys and Bq:1 values as values
+        """
         if self.vial_labels is None:
             raise ValueError("Vial labels must be provided")
 
@@ -50,50 +101,88 @@ class LSCFileReader:
 
         return labelled_values
 
-    def get_count_times(self):
+    def get_count_times(self) -> List[float]:
+        assert self.data is not None
         return self.data["Count Time"].tolist()
 
-    def get_lum(self):
+    def get_lum(self) -> List[float]:
+        assert self.data is not None
         return self.data["LUM"].tolist()
 
 
 class LSCSample:
     activity: pint.Quantity
+    origin_file: str | None
 
     def __init__(self, activity: pint.Quantity, name: str):
         self.activity = activity
         self.name = name
         # TODO add other attributes available in LSC file
         self.background_substracted = False
+        self.origin_file = None
 
     def __str__(self):
         return f"Sample {self.name}"
 
     def substract_background(self, background_sample: "LSCSample"):
+        """Substracts the background activity from the sample activity
+
+        Args:
+            background_sample (LSCSample): Background sample
+
+        Raises:
+            ValueError: If background has already been substracted
+        """
         if self.background_substracted:
             raise ValueError("Background already substracted")
         self.activity -= background_sample.activity
+        if self.activity.magnitude < 0:
+            warnings.warn(
+                f"Activity of {self.name} is negative after substracting background. Setting to zero."
+            )
+            self.activity = 0 * ureg.Bq
         self.background_substracted = True
 
     @staticmethod
-    def from_file(file_reader: LSCFileReader, vial_name):
+    def from_file(file_reader: LSCFileReader, vial_name: str) -> "LSCSample":
+        """Creates an LSCSample object from a LSCFileReader object
+
+        Args:
+            file_reader (LSCFileReader): LSCFileReader object
+            vial_name: Name of the vial
+
+        Raises:
+            ValueError: If vial_name is not found in the file reader
+
+        Returns:
+            the LSCSample object
+        """
         values = file_reader.get_bq1_values_with_labels()
         if vial_name not in values:
             raise ValueError(f"Vial {vial_name} not found in the file reader.")
         activity = values[vial_name] * ureg.Bq
-        return LSCSample(activity, vial_name)
+        sample = LSCSample(activity, vial_name)
+        sample.origin_file = file_reader.file_path
+        return sample
 
 
 class LIBRASample:
     samples: List[LSCSample]
 
-    def __init__(self, samples: List[LSCSample], time: str):
+    def __init__(self, samples: List[LSCSample], time: str | datetime):
         self.samples = samples
-        self._time = time
 
-    def get_relative_time(self, start_time: str) -> timedelta:
-        start_time = datetime.strptime(start_time, "%m/%d/%Y %I:%M %p")
-        sample_time = datetime.strptime(self._time, "%m/%d/%Y %I:%M %p")
+        if isinstance(time, str):
+            self._time = datetime.strptime(time, DATE_FORMAT)
+        else:
+            self._time = time
+
+    def get_relative_time(self, start_time: str | datetime) -> timedelta:
+
+        if isinstance(start_time, str):
+            start_time = datetime.strptime(start_time, DATE_FORMAT)
+
+        sample_time = self._time
         return sample_time - start_time
 
     def substract_background(self, background_sample: LSCSample):
@@ -120,19 +209,52 @@ class LIBRASample:
 
 class GasStream:
     samples: List[LIBRASample]
+    name: str | None
 
-    def __init__(self, samples: List[LIBRASample], start_time: str):
+    def __init__(
+        self,
+        samples: List[LIBRASample],
+        start_time: str | datetime,
+        name: str | None = None,
+    ):
+        """Creates a GasStream object from a list of LIBRASample objects
+
+        Args:
+            samples: a list of LIBRASample objects
+            start_time: the start time at which the gas stream was collected
+            name: a name for the GasStream. Defaults to None.
+        """
         self.samples = samples
-        self.start_time = start_time
+        if isinstance(start_time, str):
+            self.start_time = datetime.strptime(start_time, DATE_FORMAT)
+        else:
+            self.start_time = start_time
 
-    def get_cumulative_activity(self, form: str = "total"):
+        self.name = name
+
+    def get_cumulative_activity(
+        self, form: Literal["total", "soluble", "insoluble"] = "total"
+    ):
+        """Calculates the cumulative activity of the gas stream
+
+        Args:
+            form: the form in which the cumulative activity is calculated.
+
+        Raises:
+            ValueError: If background has not been substracted
+
+        Returns:
+            the cumulative activity as a pint.Quantity object
+        """
         # check that background has been substracted
-        for sample in self.samples:
-            for lsc_sample in sample.samples:
-                if not lsc_sample.background_substracted:
-                    raise ValueError(
-                        "Background must be substracted before calculating cumulative activity"
-                    )
+        if any(
+            not lsc_sample.background_substracted
+            for sample in self.samples
+            for lsc_sample in sample.samples
+        ):
+            raise ValueError(
+                "Background must be substracted before calculating cumulative activity"
+            )
         cumulative_activity = []
         for sample in self.samples:
             if form == "total":
@@ -146,19 +268,30 @@ class GasStream:
         return cumulative_activity
 
     @property
-    def relative_times(self):
+    def relative_times(self) -> List[timedelta]:
+        """
+        The relative times of the samples in the GasStream based on the start_time
+        as a list of timedelta objects
+        """
         return [sample.get_relative_time(self.start_time) for sample in self.samples]
 
     @property
-    def relative_times_as_pint(self):
+    def relative_times_as_pint(self) -> pint.facets.plain.PlainQuantity:
+        """
+        The relative times of the samples in the GasStream based on the start_time
+        as a pint.Quantity object
+        """
         times = [t.total_seconds() * ureg.s for t in self.relative_times]
         return ureg.Quantity.from_list(times).to(ureg.day)
 
 
 class LIBRARun:
-    def __init__(self, streams: List[GasStream], start_time: str):
+    def __init__(self, streams: List[GasStream], start_time: str | datetime):
         self.streams = streams
-        self.start_time = start_time
+        if isinstance(start_time, str):
+            self.start_time = datetime.strptime(start_time, DATE_FORMAT)
+        else:
+            self.start_time = start_time
 
 
 class BABY100mLRun(LIBRARun):
