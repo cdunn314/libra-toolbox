@@ -18,7 +18,11 @@ dynamic = ["version"]
 dependencies = ["numpy", "pint", "scipy", "matplotlib", "sympy", "pandas"]
 
 [project.optional-dependencies]
+neutronics = ["openmc-data-downloader"]
 tests = ["pytest>=5.4.3", "pytest-cov", "nbconvert", "ipykernel"]
 
 [tool.setuptools_scm]
 write_to = "libra_toolbox/_version.py"
+
+[tool.setuptools.package-data]
+mvng_source = ["*.h5"]
