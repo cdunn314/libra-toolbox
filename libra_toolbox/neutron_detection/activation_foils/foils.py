@@ -70,7 +70,7 @@ class Niobium(Foil):
         self.get_atoms()
 
         # Should update mass attenuation coefficient to be photon energy-dependent
-        self.mass_attenuation_coefficient = np.array([0.05866]) * ureg.g / ureg.cm**2   # at 1 MeV
+        self.mass_attenuation_coefficient = np.array([0.06120]) * ureg.cm**2 / ureg.g   # at 1 MeV
 
 class Zirconium(Foil):
     def __init__(self, mass: float, thickness: float, name=''):
@@ -96,8 +96,8 @@ class Zirconium(Foil):
         self.abundance = np.array([0.5145,
                                    0.5145])
         self.get_atoms()
-        
-        # Should update mass attenuation coefficient to be photon energy-dependent
-        self.mass_attenuation_coefficient = np.array([0.0581,
-                                                      0.0581]) * ureg.g / ureg.cm**2  # at 1 MeV
+
+        #From NIST Xray Mass Attenuation Coefficients Table 3
+        self.mass_attenuation_coefficient = np.array([0.08590, 
+                                                      0.06156]) * ureg.cm**2 / ureg.g  # at 1 MeV
 
