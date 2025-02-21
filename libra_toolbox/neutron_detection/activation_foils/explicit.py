@@ -1,6 +1,6 @@
-from settings import *
-import foils
-from calculations import n93_number, delay_time
+from .settings import *
+from .foils import Experiment, Foil
+from .calculations import n93_number, delay_time
 import numpy as np
 import pandas as pd
 import os
@@ -61,7 +61,7 @@ def get_efficiency(energies=None, coeff=None,
     return total_efficiency
 
 
-def get_neutron_flux(experiment: foils.Experiment, irradiations: list, foil: foils.Foil):
+def get_neutron_flux(experiment: Experiment, irradiations: list, foil: Foil):
     """calculates the neutron flux during the irradiation
     Based on Equation 1 from:
     Lee, Dongwon, et al. "Determination of the Deuterium-Tritium (D-T) Generator 
@@ -151,7 +151,7 @@ def get_neutron_flux(experiment: foils.Experiment, irradiations: list, foil: foi
     return flux
 
 
-def get_neutron_flux_error(experiment: foils.Experiment, foil: foils.Foil):
+def get_neutron_flux_error(experiment: Experiment, foil: Foil):
     """
     Returns the uncertainty of the neutron flux as a pint.Quantity
 
@@ -163,7 +163,7 @@ def get_neutron_flux_error(experiment: foils.Experiment, foil: foils.Foil):
         pint.Quantity: uncertainty of the neutron flux
     """ 
     error_counts = experiment.photon_counts_uncertainty / experiment.photon_counts
-    error_mass = 0.0001 * ureg.g / experiment["foil_mass"]
+    error_mass = 0.0001 * ureg.g / experiment.foil_mass
     error_geometric_eff = 0.025 / geometric_efficiency
     error_intrinsic_eff = 0.025 / nal_gamma_efficiency
 

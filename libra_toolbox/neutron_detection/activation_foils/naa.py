@@ -682,6 +682,7 @@ def energy_efficiency(counts, decay_lines, nuclides=None,
     print('effs: ', effs)
     print('energies: ', energies)
     coeff = {}
+    bounds = {}
     for ch in effs.keys():
         ind = np.argsort(energies[ch])
         energies[ch] = np.array(energies[ch])[ind]
@@ -690,6 +691,9 @@ def energy_efficiency(counts, decay_lines, nuclides=None,
 
         # Create polynomial fit
         coeff[ch] = np.polyfit(energies[ch], effs[ch], degree)
+
+        # Get bounds of fit for interpolation
+        bounds[ch] = [np.min(energies[ch]), np.max(energies[ch])]
     
     if plot_eff:
         if ax_eff is None:
@@ -704,7 +708,7 @@ def energy_efficiency(counts, decay_lines, nuclides=None,
             ax_eff[i].set_xlabel('Energy [keV]')
             ax_eff[i].set_ylabel('Detector Efficiency [%]')
     
-    return effs, eff_errs, coeff
+    return effs, eff_errs, coeff, bounds
         
 
 

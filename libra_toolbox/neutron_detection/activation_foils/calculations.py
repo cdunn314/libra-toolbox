@@ -1,6 +1,6 @@
 import numpy as np
 import sympy as sp
-from .settings import *
+from settings import *
 import datetime
 import matplotlib.pyplot as plt
 

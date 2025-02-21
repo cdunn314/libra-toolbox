@@ -1,8 +1,9 @@
 from libra_toolbox.neutron_detection.activation_foils.settings import ureg
 
-foil_data = {
+foil_dict = {
     "20231109_BABY-4_Nb-2I_0659_4hr": {
         "foil_name": "2I",
+        "element": "Nb",
         "generator": "P383",
         "run": 4,
         "foil_mass": 0.2769 * ureg.g,
@@ -15,6 +16,7 @@ foil_data = {
     },
     "20231109_BABY-4_Nb-2I_1623_4hr": {
         "foil_name": "2I",
+        "element": "Nb",
         "generator": "P383",
         "run": 4,
         "foil_mass": 0.2769 * ureg.g,
@@ -27,6 +29,7 @@ foil_data = {
     },
     "20231109_BABY-4_Nb-2J_2027_4hr": {
         "foil_name": "2J",
+        "element": "Nb",
         "generator": "A325",
         "run": 4,
         "foil_mass": 0.26 * ureg.g,
@@ -39,6 +42,7 @@ foil_data = {
     },
     "20231110_BABY-4_Nb-2J_1442_4hr": {
         "foil_name": "2J",
+        "element": "Nb",
         "generator": "A325",
         "run": 4,
         "foil_mass": 0.26 * ureg.g,
@@ -51,6 +55,7 @@ foil_data = {
     },
     "20231209_BABY-5_Nb-B_A125dt_0922_4hr": {
         "foil_name": "B",
+        "element": "Nb",
         "generator": "A325",
         "run": 5,
         "foil_mass": 0.2831 * ureg.g,
@@ -63,6 +68,7 @@ foil_data = {
     },
     "20231209_BABY-5_Nb-B_A125dt_1609_4hr": {
         "foil_name": "B",
+        "element": "Nb",
         "generator": "A325",
         "run": 5,
         "foil_mass": 0.2831 * ureg.g,
@@ -75,6 +81,7 @@ foil_data = {
     },
     "20231208_BABY-5_Nb-D_P383dt_1132_4hr": {
         "foil_name": "D",
+        "element": "Nb",
         "generator": "P383",
         "run": 5,
         "foil_mass": 0.2776 * ureg.g,
@@ -87,6 +94,7 @@ foil_data = {
     },
     "20231208_BABY-5_Nb-D_P383dt_1555_4hr": {
         "foil_name": "D",
+        "element": "Nb",
         "generator": "P383",
         "run": 5,
         "foil_mass": 0.2776 * ureg.g,
@@ -99,6 +107,7 @@ foil_data = {
     },
     "20240128_BABY6_Nb-A_A-325_1054_4hr": {
         "foil_name": "A",
+        "element": "Nb",
         "generator": "A325",
         "run": 6,
         "foil_mass": 0.2733 * ureg.g,
@@ -111,6 +120,7 @@ foil_data = {
     },
     "20240128_BABY6_Nb-A_A-325_1638_4hr": {
         "foil_name": "A",
+        "element": "Nb",
         "generator": "A325",
         "run": 6,
         "foil_mass": 0.2733 * ureg.g,
@@ -123,6 +133,7 @@ foil_data = {
     },
     "20240127_BABY6_Nb-C_P383_1313_4hr": {
         "foil_name": "C",
+        "element": "Nb",
         "generator": "P383",
         "run": 6,
         "foil_mass": 0.2869 * ureg.g,
@@ -135,6 +146,7 @@ foil_data = {
     },
     "20240127_BABY6_Nb-C_P383_1738_4hr": {
         "foil_name": "C",
+        "element": "Nb",
         "generator": "P383",
         "run": 6,
         "foil_mass": 0.2869 * ureg.g,
