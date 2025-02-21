@@ -1,5 +1,54 @@
 import numpy as np
+import datetime
+from zoneinfo import ZoneInfo
 from settings import ureg
+
+
+def convert_to_datetime(time:str, tzinfo=ZoneInfo('America/New_York')):
+    if isinstance(time, str):
+        datetime_obj = datetime.datetime.strptime(time, "%m/%d/%Y %H:%M:%S")
+    elif isinstance(time, datetime.datetime):
+        datetime_obj = time
+    else:
+        raise ValueError('Time is neither a string nor a datetime.datetime object.')
+    # Check if timezone info is included
+    if datetime_obj.tzinfo is None:
+        # If not, use New York time as default
+        datetime_obj = datetime_obj.replace(tzinfo=tzinfo)
+    return datetime_obj
+
+
+class Experiment:
+    def __init__(self, time_generator_off,
+                 start_time_counting,
+                 distance_from_center_of_target_plane: ureg.Quantity,
+                 real_count_time: ureg.Quantity,
+                 name=None, generator=None, run=None,
+                 live_count_time=None,
+                 tzinfo=ZoneInfo('America/New_York')):
+        # Ensure times are all datetime objects with timezones
+        self.time_generator_off = convert_to_datetime(time_generator_off)
+        self.start_time_counting = convert_to_datetime(start_time_counting)
+        self.real_count_time = real_count_time
+        self.distance_from_center_of_target_plane = distance_from_center_of_target_plane
+        self.name = name
+        self.generator = generator
+        self.run = run
+
+        if live_count_time:
+            self.live_count_time = live_count_time
+        else:
+            self.live_count_time = real_count_time
+        self.total_eff_coeff = None
+        self.intrinsic_eff_coeff = None
+        self.geometric_efficiency = 1
+        self.efficiency_bounds = np.array([])
+        self.photon_counts = None
+        self.photon_counts_uncertainty = None
+
+    
+
+
 
 class Foil:
     def __init__(self, mass: float, thickness: float, name=''):
@@ -56,7 +105,7 @@ class Niobium(Foil):
         self.branching_ratio = np.array([0.9915])
         # branching ratio used in BABY 100 mL analysis
         # self.branching_ratio = [0.999]
-        self.photon_energies = np.array([934.44])
+        self.photon_energies = np.array([934.44]) * ureg.keV
 
         # Cross section from EAF-2010 at 14 MeV
         self.cross_section = np.array([0.4729]) * ureg.barn
@@ -81,14 +130,17 @@ class Zirconium(Foil):
 
         self.reaction = ["Zr90(n,2n)Zr89", 
                          "Zr90(n,2n)Zr89"]
-        self.branching_ratio = np.array([0.9904, 
-                                         0.45])
-        self.photon_energies = np.array([909.15, 
-                                         511]) * ureg.keV
+        self.branching_ratio = np.array([0.45, 
+                                         0.9904])
+        self.photon_energies = np.array([511, 
+                                         909.15]) * ureg.keV
 
         # Cross sections from EAF-2010 at 14 MeV
         self.cross_section = np.array([0.5068,
                                        0.5068]) * ureg.barn
+        # Cross sections from ENDF/B-VIII.0 at 14.1 MeV
+        # self.cross_section = np.array([0.5382,
+        #                                0.5382]) * ureg.barn
                               
         self.density = 6.505 * ureg.g / ureg.cm**3 
         self.atomic_mass = 91.222 * ureg.g / ureg.mol
@@ -98,6 +150,27 @@ class Zirconium(Foil):
         self.get_atoms()
 
         #From NIST Xray Mass Attenuation Coefficients Table 3
-        self.mass_attenuation_coefficient = np.array([0.08590, 
-                                                      0.06156]) * ureg.cm**2 / ureg.g  # at 1 MeV
+        self.mass_attenuation_coefficient = np.array([0.06156,
+                                                      0.08590]) * ureg.cm**2 / ureg.g  # at 1 MeV
+
+
+def convert_dict_to_foils(data:dict):
+    if data["element"] == "Nb":
+        foil = Niobium(mass=data["foil_mass"],
+                       thickness=0.01 * ureg.inch,
+                       name=data["foil_name"])
+    elif data["element"] == "Zr":
+        foil = Zirconium(mass=data["foil_mass"],
+                         thickness=0.005 * ureg.inch,
+                         name=data["foil_name"])
+        
+    # Clean up data dictionary to not include foil class arguments
+    experiment_dict = {}
+    for key in data.keys():
+        if key not in ["element", "foil_mass", "foil_name"]:
+            experiment_dict[key] = data[key]
+    experiment = Experiment(**experiment_dict)
+
+    return experiment, foil
+
 
