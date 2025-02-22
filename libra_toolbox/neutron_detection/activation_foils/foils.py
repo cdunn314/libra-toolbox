@@ -1,7 +1,7 @@
 import numpy as np
 import datetime
 from zoneinfo import ZoneInfo
-from settings import ureg
+from .settings import ureg
 
 
 def convert_to_datetime(time:str, tzinfo=ZoneInfo('America/New_York')):
