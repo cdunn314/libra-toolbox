@@ -331,9 +331,9 @@ def get_peaks(hist, source):
     if 'na22' in source.lower():
         # Find 1275 keV peak
         peak_511 = peaks[0]
-        print(peak_511)
+        # print(peak_511)
         start_index = peak_511 + 100
-        print(start_index)
+        # print(start_index)
         prominence = 0.5 * np.max(hist[start_index:])
         height = 0.10 * np.max(hist[start_index:])
 
@@ -343,9 +343,9 @@ def get_peaks(hist, source):
                                   width=width,
                                   distance=distance)
         high_peaks = np.array(high_peaks) + start_index
-        print('Na22: searched prominence:', prominence, ' :', high_peaks, peak_data)
+        # print('Na22: searched prominence:', prominence, ' :', high_peaks, peak_data)
         peaks = [peak_511, high_peaks[0]]
-    print(source, peaks)
+    # print(source, peaks)
     if indices:
         peaks = peaks[[indices]][0]
 
@@ -366,7 +366,7 @@ def calibrate_counts(counts, decay_lines, peak_inputs=None, plot_calibration=Fal
     if peak_inputs is None:
         peak_inputs = get_peak_inputs(decay_lines.keys())
 
-    print(peak_inputs)
+    # print(peak_inputs)
 
     # find what digitizer channels were used (ex. Ch0 and Ch1)
     ch_keys = counts[list(counts.keys())[0]].keys()
@@ -388,7 +388,7 @@ def calibrate_counts(counts, decay_lines, peak_inputs=None, plot_calibration=Fal
                 #                     width=peak_inputs[sample]['width'])
                 # peaks = np.array(peaks) + peak_inputs[sample]['start_index']
                 peaks = get_peaks(counts[sample][ch]['hist'], sample)
-                print(ch, sample, peaks)
+                # print(ch, sample, peaks)
                 if len(peaks) != len(decay_lines[sample]['energy']):
                     raise LookupError('SciPy find_peaks() found {} photon peaks, while {} were expected'.format(len(peaks), 
                                                                                                                 len(decay_lines[sample]['energy'])))
@@ -401,9 +401,9 @@ def calibrate_counts(counts, decay_lines, peak_inputs=None, plot_calibration=Fal
         calibration_channels[ch] = np.array(calibration_channels[ch])[inds]
         calibration_energies[ch] = np.array(calibration_energies[ch])[inds]
 
-        print(ch)
-        print(calibration_channels[ch])
-        print(calibration_energies[ch])
+        # print(ch)
+        # print(calibration_channels[ch])
+        # print(calibration_energies[ch])
 
         # linear fit for calibration curve
         coeff[ch] = np.polyfit(calibration_channels[ch], calibration_energies[ch], 1)
@@ -462,10 +462,10 @@ def get_singlepeak_area(hist, bins, peak_erg, search_width=300, plot=False):
                         hist[peak_ind],
                         peak_erg,
                         search_width/6]
-    print(guess_parameters)
+    # print(guess_parameters)
                         
     parameters, covariance = curve_fit(gauss1, xvals[search_start:search_end], hist[search_start:search_end], p0=guess_parameters) 
-    print(parameters)
+    # print(parameters)
 
     mean = parameters[3]
     sigma = parameters[4]
@@ -565,7 +565,7 @@ def get_multipeak_area(hist, bins, peak_ergs, search_width=600, plot=False):
             # ax.plot([xvals[peak_ends[i]]]*2, [0, np.max(hist)], '--', color=colors[i])
 
             trap_cutoff_ys = parameters[0] + parameters[1] * xvals[peak_starts[i]:peak_ends[i]]
-            print('Plot gauss params: {}'.format(all_peak_params[i]))
+            # print('Plot gauss params: {}'.format(all_peak_params[i]))
             ax.fill_between(xvals[peak_starts[i]:peak_ends[i]], gauss(xvals[peak_starts[i]:peak_ends[i]], *all_peak_params[i]), 
                         trap_cutoff_ys, color=colors[i], alpha=0.5)
             erg_str += ' {:.0f},'.format(peak_ergs[i])
@@ -612,13 +612,13 @@ def get_peak_areas(hist, bins, peak_ergs,
     # organize peak energies into tuples, in which peak energies close enough
     # to have overlapping peaks will be paired together
     erg_groups = group_close_values(peak_ergs, threshold=overlap_width)
-    print(erg_groups)
+    # print(erg_groups)
 
     for erg_group in erg_groups:
             areas += get_multipeak_area(hist, bins, erg_group, 
                                         search_width=len(erg_group)*search_width,
                                         plot=plot)
-            print(areas)
+            # print(areas)
     return areas
 
 
@@ -647,7 +647,7 @@ def energy_efficiency(counts, decay_lines, nuclides=None,
                 eff_errs[ch] = []
                 energies[ch] = []
 
-            print(nuc, ' Ch ', ch )
+            # print(nuc, ' Ch ', ch )
             areas = get_peak_areas(counts[nuc][ch]['hist'],
                             counts[nuc][ch]['calibrated_bin_edges'],
                             peak_energies,
@@ -656,31 +656,31 @@ def energy_efficiency(counts, decay_lines, nuclides=None,
                             plot=plot_areas)
             if sum_peak:
                 areas = np.array(areas)[:-1] + areas[-1] / len(areas[:-1])
-            print('Peak areas: ', areas)
+            # print('Peak areas: ', areas)
             # measured activity
             # I think this should be divided by live count time, but maybe it should
             # be divided by real count time?? Should go over this again
             act_meas = np.array(areas) / (np.array(decay_lines[nuc]['intensity']) \
                                              * counts[nuc][ch]['live_count_time'] )
-            print('Activity measured: ', act_meas)
+            # print('Activity measured: ', act_meas)
             act_meas_err = np.sqrt(np.array(areas)) / (np.array(decay_lines[nuc]['intensity'])
                                              * counts[nuc][ch]['live_count_time'])
             # expected activity
             l = np.log(2) / decay_lines[nuc]['half_life']
-            print('decay constant: ', l)
+            # print('decay constant: ', l)
             time = (counts[nuc][ch]['start_time'] - decay_lines[nuc]['activity_date']).total_seconds()
-            print('count time: ', time)
+            # print('count time: ', time)
             act_expec = decay_lines[nuc]['activity'] * np.exp(-l * time)
-            print('Activity expected: ', act_expec)
-            print('efficiency: ', act_meas/act_expec)
+            # print('Activity expected: ', act_expec)
+            # print('efficiency: ', act_meas/act_expec)
 
             effs[ch] += list(act_meas / act_expec)
             eff_errs[ch] += list(act_meas_err / act_expec)
             energies[ch] += decay_lines[nuc]['energy']
     
     # Sort the data
-    print('effs: ', effs)
-    print('energies: ', energies)
+    # print('effs: ', effs)
+    # print('energies: ', energies)
     coeff = {}
     bounds = {}
     for ch in effs.keys():

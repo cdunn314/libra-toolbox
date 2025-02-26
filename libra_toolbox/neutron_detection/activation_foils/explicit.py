@@ -43,7 +43,8 @@ def get_efficiency(energies=None, coeff=None,
         # These are the efficiencies reported for activation foil analysis
         # of the BABY 100 mL runs
         geometric_eff = 0.5
-        intrinsic_efficiency = 0.344917296922981
+        # Account for double counting in these experiments
+        intrinsic_efficiency = 0.344917296922981 * 2
         total_efficiency = geometric_eff * intrinsic_efficiency
         warnings.warn('Using NaI efficiency from BABY 100 mL runs, which may not reflect detector efficiency accurately.')
     else:
@@ -82,7 +83,7 @@ def get_neutron_flux(experiment: Experiment, irradiations: list, foil: Foil):
     # )
     time_between_generator_off_and_start_of_counting = (
         experiment.start_time_counting - experiment.time_generator_off
-    ).seconds * ureg.second
+    ).total_seconds() * ureg.second
 
     if experiment.total_eff_coeff is not None:
         total_efficiency = get_efficiency(energies=foil.photon_energies,
@@ -92,8 +93,9 @@ def get_neutron_flux(experiment: Experiment, irradiations: list, foil: Foil):
     elif experiment.intrinsic_eff_coeff is not None:
         total_efficiency = get_efficiency(energies=foil.photon_energies,
                                           coeff=experiment.intrinsic_eff_coeff,
-                                          coeff_energy_bounds=experiment['efficiency_bounds'],
-                                          coeff_type='intrinsic')
+                                          coeff_energy_bounds=experiment.efficiency_bounds,
+                                          coeff_type='intrinsic',
+                                          geometric_eff=experiment.geometric_efficiency)
     else:
         total_efficiency = get_efficiency()
 
@@ -102,12 +104,15 @@ def get_neutron_flux(experiment: Experiment, irradiations: list, foil: Foil):
 
     f_spec = total_efficiency * foil.branching_ratio
 
-    print('total efficiency', total_efficiency)
     number_of_decays_measured = experiment.photon_counts / f_spec
 
-    print('number of decays measured', number_of_decays_measured)
-    # print('number', foil.atoms)
-    # print('cross section', foil.cross_section)
+    # print('photon counts ', experiment.photon_counts)
+    # print('total efficiency ', total_efficiency)
+    # print('branching ratio ', foil.branching_ratio)
+
+    # print('photon counts / total efficiency / branching ratio: ', number_of_decays_measured)
+    # print('number ', foil.atoms)
+    # print('cross section ', foil.cross_section)
 
 
     flux = (
@@ -115,6 +120,9 @@ def get_neutron_flux(experiment: Experiment, irradiations: list, foil: Foil):
         / foil.atoms
         / foil.cross_section
     )
+
+    # print('# of decays measured / n_Nb93 / xs: ', flux)
+
 
     f_time = (get_chain(irradiations, foil.decay_constant)
                 * np.exp( -foil.decay_constant
@@ -124,18 +132,29 @@ def get_neutron_flux(experiment: Experiment, irradiations: list, foil: Foil):
                 / foil.decay_constant
     )
 
+    # print('decay constant ', foil.decay_constant)
+    # print('get_chain() ', get_chain(irradiations, foil.decay_constant))
+    # print('time between generator off and start of counting ', time_between_generator_off_and_start_of_counting)
+    # print('flux / f_time :', (flux / f_time).to(1/ureg.s/ureg.cm**2))
 
     # Correction factor of gamma-ray self-attenuation in the foil
-    f_self = ( (1 - 
-                    np.exp(-foil.mass_attenuation_coefficient
-                           * foil.density
-                           * foil.thickness))
-                / (foil.mass_attenuation_coefficient
-                   * foil.density
-                   * foil.thickness)
-    ).to('dimensionless')
+    if foil.thickness is None:
+        f_self = 1
+    else:
+        f_self = ( (1 - 
+                        np.exp(-foil.mass_attenuation_coefficient
+                            * foil.density
+                            * foil.thickness))
+                    / (foil.mass_attenuation_coefficient
+                    * foil.density
+                    * foil.thickness)
+        ).to('dimensionless')
+
 
     flux /= (f_time * f_self)
+
+    # print('flux / f_time / f_self: ', flux.to(1/ureg.s/ureg.cm**2))
+
 
     # print('flux: ', flux.to_reduced_units())
     # print('f_time', f_time)
@@ -144,9 +163,12 @@ def get_neutron_flux(experiment: Experiment, irradiations: list, foil: Foil):
     # convert n/cm2/s to n/s
     area_of_sphere = 4 * np.pi * experiment.distance_from_center_of_target_plane ** 2
 
+
     flux *= area_of_sphere
 
     flux = flux.to(1/ureg.s)
+
+    # print('final flux: ', flux, '\n')
 
     return flux
 
@@ -163,7 +185,7 @@ def get_neutron_flux_error(experiment: Experiment, foil: Foil):
         pint.Quantity: uncertainty of the neutron flux
     """ 
     error_counts = experiment.photon_counts_uncertainty / experiment.photon_counts
-    error_mass = 0.0001 * ureg.g / experiment.foil_mass
+    error_mass = 0.0001 * ureg.g / foil.mass
     error_geometric_eff = 0.025 / geometric_efficiency
     error_intrinsic_eff = 0.025 / nal_gamma_efficiency
 

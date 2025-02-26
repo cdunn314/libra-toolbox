@@ -23,28 +23,33 @@ class Experiment:
                  start_time_counting,
                  distance_from_center_of_target_plane: ureg.Quantity,
                  real_count_time: ureg.Quantity,
-                 name=None, generator=None, run=None,
                  live_count_time=None,
+                 name=None, generator=None, run=None,
+                 total_eff_coeff=None, intrinsic_eff_coeff=None,
+                 efficiency_bounds=None,
+                 geometric_efficiency=1,
+                 photon_counts=None,
+                 photon_counts_uncertainty=None,
                  tzinfo=ZoneInfo('America/New_York')):
         # Ensure times are all datetime objects with timezones
         self.time_generator_off = convert_to_datetime(time_generator_off)
         self.start_time_counting = convert_to_datetime(start_time_counting)
-        self.real_count_time = real_count_time
         self.distance_from_center_of_target_plane = distance_from_center_of_target_plane
-        self.name = name
-        self.generator = generator
-        self.run = run
-
+        self.real_count_time = real_count_time
         if live_count_time:
             self.live_count_time = live_count_time
         else:
             self.live_count_time = real_count_time
-        self.total_eff_coeff = None
-        self.intrinsic_eff_coeff = None
-        self.geometric_efficiency = 1
-        self.efficiency_bounds = np.array([])
-        self.photon_counts = None
-        self.photon_counts_uncertainty = None
+        self.name = name
+        self.generator = generator
+        self.run = run
+
+        self.total_eff_coeff = total_eff_coeff
+        self.intrinsic_eff_coeff = intrinsic_eff_coeff
+        self.geometric_efficiency = geometric_efficiency
+        self.efficiency_bounds = efficiency_bounds
+        self.photon_counts = photon_counts
+        self.photon_counts_uncertainty = photon_counts_uncertainty
 
     
 
@@ -79,9 +84,13 @@ class Foil:
             "Thickness (cm)": self.thickness,
             "Decay Constant (1/s)": self.decay_constant,
             "Reaction": self.reaction,
+            "Branching Ratio": self.branching_ratio,
+            "Photon Energies": self.photon_energies,
             "Cross Section (barns)": self.cross_section,
             "Density (g/cm³)": self.density,
-            "Mass Attenuation Coefficient (cm²/g)": self.mass_attenuation_coefficient,
+            "Atomic Mass": self.atomic_mass,
+            "Abundance": self.abundance,
+            "Mass Attenuation Coefficient (cm²/g)": self.mass_attenuation_coefficient
         }
     
     def get_decay_constant(self):
@@ -90,36 +99,46 @@ class Foil:
     def get_atoms(self):
         self.atoms = (self.abundance 
                       * (self.mass 
-                         * (6.022e23 * ureg.particle / ureg.mol) 
+                         * (6.022141e23 * ureg.particle / ureg.mol) 
                          / self.atomic_mass))
 
 class Niobium(Foil):
     def __init__(self, mass: float, thickness: float, name=''):
         super().__init__(mass, thickness, name=name)
+
         self.half_life = np.array([10.15]) * ureg.day
-        # half life used in BABY 100 mL analysis
-        # self.half_life = [10.25 * ureg.day]
         self.get_decay_constant()
 
         self.reaction = ["Nb93(n,2n)Nb92m"]
         self.branching_ratio = np.array([0.9915])
-        # branching ratio used in BABY 100 mL analysis
-        # self.branching_ratio = [0.999]
         self.photon_energies = np.array([934.44]) * ureg.keV
 
         # Cross section from EAF-2010 at 14 MeV
         self.cross_section = np.array([0.4729]) * ureg.barn
-        # cross section used in BABY 100 mL analysis
-        # self.cross_section = 0.46 * ureg.barn
 
         self.density = 8.582 * ureg.g / ureg.cm**3 
-        self.atomic_mass = 92.90638 * ureg.g/ureg.mol
+        self.atomic_mass = 92.90637 * ureg.g/ureg.mol
         # Natural abundance of reactant in analyzed foil reaction
         self.abundance = np.array([1.00])
         self.get_atoms()
 
         # Should update mass attenuation coefficient to be photon energy-dependent
         self.mass_attenuation_coefficient = np.array([0.06120]) * ureg.cm**2 / ureg.g   # at 1 MeV
+
+    def get_100mL_params(self):
+        # Adjust parameters to replicate previous 100 mL results
+
+        # half life used in BABY 100 mL analysis
+        self.half_life = np.array([10.25]) * ureg.day
+        self.get_decay_constant()
+
+        # branching ratio used in BABY 100 mL analysis
+        self.branching_ratio = np.array([0.999])
+
+        # cross section used in BABY 100 mL analysis
+        self.cross_section = np.array([0.46]) * ureg.barn
+
+
 
 class Zirconium(Foil):
     def __init__(self, mass: float, thickness: float, name=''):
@@ -154,11 +173,14 @@ class Zirconium(Foil):
                                                       0.08590]) * ureg.cm**2 / ureg.g  # at 1 MeV
 
 
-def convert_dict_to_foils(data:dict):
+def convert_dict_to_foils(data:dict, use_100mL_params=False):
     if data["element"] == "Nb":
         foil = Niobium(mass=data["foil_mass"],
                        thickness=0.01 * ureg.inch,
                        name=data["foil_name"])
+        if use_100mL_params:
+            foil.thickness = None
+            foil.get_100mL_params()
     elif data["element"] == "Zr":
         foil = Zirconium(mass=data["foil_mass"],
                          thickness=0.005 * ureg.inch,
