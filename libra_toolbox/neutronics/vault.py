@@ -4,6 +4,7 @@ def build_vault_model(
     added_cells=[],
     added_materials=[],
     overall_exclusion_region=None,
+    cross_sections_destination="cross_sections",
 ) -> "openmc.model.Model":
     """
     Builds a complete OpenMC model for a simulation setup representing a
@@ -95,6 +96,7 @@ def build_vault_model(
         libraries=["ENDFB-8.0-NNDC"],
         set_OPENMC_CROSS_SECTIONS=True,
         particles=["neutron"],
+        destination=cross_sections_destination,
     )
     #
     # Definition of the spherical void/blackhole boundary
