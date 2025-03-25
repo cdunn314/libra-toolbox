@@ -3,6 +3,8 @@ import datetime
 def get_decay_lines(nuclides:list[str])->dict:
     """ Creates dictionary of check source data
     given a list of check source nuclides. """
+    # energy is the gamma energy in units of eV
+    # intensity is the percentage of decays that result in this energy gamma
     all_decay_lines = {'Ba133':{'energy':[80.9979, 276.3989, 302.8508, 356.0129, 383.8485],
                          'intensity':[0.329, 0.0716, 0.1834, 0.6205, 0.0894],
                          'half_life':[10.551*365.25*24*3600],
@@ -33,5 +35,5 @@ def get_decay_lines(nuclides:list[str])->dict:
         if nuclide in all_decay_lines.keys():
             decay_lines[nuclide] = all_decay_lines[nuclide]
         else:
-            raise Warning(f'{nuclide} not yet added to get_decay_lines()')
+            raise ValueError(f'{nuclide} not yet added to get_decay_lines()')
     return decay_lines
