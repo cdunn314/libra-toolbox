@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import pandas as pd
+import datetime
 
 
 def get_channel(filename):
@@ -116,4 +117,31 @@ def get_events(directory):
             # print(len(time_values[source]))
             energy_values[ch].extend(energy_data)
     return time_values, energy_values
+
+
+def get_start_stop_time(run_info_filepath):
+    """ Gets the start and stop time as a datetime.datetime object
+    for a detector count from the run.info Compass file"""
+
+    if os.path.isfile(run_info_filepath):
+        time_format = "%Y/%m/%d %H:%M:%S.%f%z"
+        with open(run_info_filepath, 'r') as file:
+            continue_search = True
+            while continue_search:
+                line = file.readline()
+                if 'time.start=' in line:
+                    # get time string while cutting off '\n' newline
+                    time_string = line.split('=')[1][:-1]
+                    start_time = datetime.datetime.strptime(time_string, time_format)
+                elif 'time.stop=' in line:
+                    time_string = line.split('=')[1][:-1]
+                    stop_time = datetime.datetime.strptime(time_string, time_format)
+                    continue_search = False
+                elif len(line) == 0:
+                    # if blank line occurs, stop search
+                    continue_search = False
+    else:
+        raise LookupError('Could not find run.info file')
+    
+    return start_time, stop_time
 

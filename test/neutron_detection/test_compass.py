@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import os
+import datetime
 from libra_toolbox.neutron_detection.activation_foils import compass
 
 TEST_DIR = os.path.dirname(__file__)  # directory of this test file
@@ -87,5 +88,18 @@ def test_get_events(directory, expected_times, expected_energies):
     check_dictionaries(energies, expected_energies)
 
 
+
+def test_get_start_stop_time(run_info_filepath, expected_start_time_str, expected_stop_time_str):
+    time_format = "%Y/%m/%d %H:%M:%S.%f%z"
+    expected_start_time = datetime.datetime.strptime(expected_start_time_str, time_format)
+    expected_stop_time = datetime.datetime.strptime(expected_stop_time_str, time_format)
+
+    start_time, stop_time = compass.get_start_stop_time(run_info_filepath)
+
+    assert isinstance(start_time, datetime.datetime)
+    assert start_time == expected_start_time
+
+    assert isinstance(stop_time, datetime.datetime)
+    assert stop_time == expected_stop_time
     
    
