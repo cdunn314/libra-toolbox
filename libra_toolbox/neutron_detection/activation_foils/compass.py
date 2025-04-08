@@ -45,7 +45,7 @@ def sort_compass_files(directory):
             if ch not in data_filenames.keys():
                 data_filenames[ch] = []
 
-            data_filenames[ch] = filename
+            data_filenames[ch] += [filename]
     # Sort filenames by number at end
     for ch in data_filenames.keys():
         data_filenames[ch] = np.sort(data_filenames[ch])
