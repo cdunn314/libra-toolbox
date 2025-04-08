@@ -8,10 +8,24 @@ from libra_toolbox.neutron_detection.activation_foils import compass
     ("Data_CH21@V1725_456_Background_250322.CSV", 21),
 ])
 
-
 def test_get_channel(filename, expected_channel):
     ch = compass.get_channel(filename)
     assert ch == expected_channel
+    
+
+def check_dictionaries(test_dict, expected_dict):
+    """ Tests single-layer dictionary (no dictionaries inside the dictionary)
+    to make sure the keys, length, and overall numpy data is the same."""
+
+    for key in expected_dict:
+        assert key in test_dict
+        assert len(test_dict[key]) == len(expected_dict[key])
+        for a, b in zip(test_dict[key], expected_dict[key]):
+            if isinstance(a, np.ndarray) and isinstance(b, np.ndarray):
+                assert np.array_equal(a, b)
+            else:
+                assert a == b
+
 
 @pytest.mark.parametrize("directory, expected_filenames",[
     ("compass_data", {0:["Data_CH0@DT5730SB_Cs137_Problem_Waveform_1103.CSV",
@@ -26,15 +40,19 @@ def test_sort_compass_files(directory, expected_filenames):
     
     # Check if dictionaries have the same keys, length of filenames array, and 
     # the same overall filenames array
-    for key in expected_filenames:
-        assert key in data_filenames
-        assert len(data_filenames[key]) == len(expected_filenames[key])
-        for a, b in zip(data_filenames[key], expected_filenames[key]):
-            if isinstance(a, np.ndarray) and isinstance(b, np.ndarray):
-                assert np.array_equal(a, b)
-            else:
-                assert a == b
+    check_dictionaries(data_filenames, expected_filenames)
 
+
+def test_get_events(directory, expected_times, expected_energies):
+    times, energies = compass.get_events(directory)
+    assert isinstance(times, dict)
+    assert isinstance(energies, dict)
+
+    # Check if dictionaries have the same keys, length of data array, and 
+    # the same overall data array
+
+    check_dictionaries(times, expected_times)
+    check_dictionaries(energies, expected_energies)
 
 
     
