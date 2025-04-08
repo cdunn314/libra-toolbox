@@ -1,6 +1,11 @@
 import pytest
 import numpy as np
+import os
 from libra_toolbox.neutron_detection.activation_foils import compass
+
+TEST_DIR = os.path.dirname(__file__)  # directory of this test file
+COMPASS_DATA_DIR = os.path.join(TEST_DIR, "compass_data")
+
 
 @pytest.mark.parametrize("filename, expected_channel", [
     ("Data_CH14@V1725_292_Background_250322.CSV", 14),
@@ -28,7 +33,7 @@ def check_dictionaries(test_dict, expected_dict):
 
 
 @pytest.mark.parametrize("directory, expected_filenames",[
-    ("compass_data", {0:["Data_CH0@DT5730SB_Cs137_Problem_Waveform_1103.CSV",
+    (COMPASS_DATA_DIR, {0:["Data_CH0@DT5730SB_Cs137_Problem_Waveform_1103.CSV",
                          "Data_CH0@DT5730SB_Cs137_Problem_Waveform_1103_1.CSV"],
                       1:["Data_CH1@V1725_Cs137_Normal_List_241107.CSV",
                          "Data_CH1@V1725_Cs137_Normal_List_241107_1.CSV",
