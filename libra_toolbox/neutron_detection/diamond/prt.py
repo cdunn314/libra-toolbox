@@ -26,7 +26,10 @@ def get_timestamps_and_amplitudes(
 
 
 def load_data_from_file(filename: str | Path) -> dict:
-    """Reads a h5 file from ROSY and returns the data in a dictionary with numpy arrays.
+    """
+    Reads a h5 file from ROSY and returns the data for each channel (timestamps in s and
+    amplitudes in mV) in a dictionary with numpy arrays.
+    If a channel is not active, it will be an empty array.
 
     Args:
         filename: the filename
@@ -40,8 +43,8 @@ def load_data_from_file(filename: str | Path) -> dict:
         channels = list(ROSY_file.keys())
         print(channels)
         # general information
-        Active_channels = ROSY_file.attrs["Active channels"]
-        print(f"Active channels: {Active_channels}")
+        active_channels = ROSY_file.attrs["Active channels"]
+        print(f"Active channels: {active_channels}")
 
         data = {}
 
@@ -50,7 +53,7 @@ def load_data_from_file(filename: str | Path) -> dict:
                 continue
             print(f"Channel {i}: {channel_name}")
 
-            if Active_channels[i]:
+            if active_channels[i]:
                 channel_timestamps, channel_amplitudes = get_timestamps_and_amplitudes(
                     ROSY_file, channel_name
                 )
