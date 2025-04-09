@@ -22,6 +22,11 @@ This documentation will guide you through the various features and functionaliti
         :link: examples/fit_tritium_release.ipynb
         :text-align: center
 
+    .. grid-item-card:: PRT analysis
+        :img-bottom: _static/prt.png
+        :link: examples/prt.ipynb
+        :text-align: center
+
 Installation
 ------------
 
