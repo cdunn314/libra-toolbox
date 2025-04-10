@@ -22,6 +22,11 @@ This documentation will guide you through the various features and functionaliti
         :link: examples/fit_tritium_release.ipynb
         :text-align: center
 
+    .. grid-item-card:: PRT analysis
+        :img-bottom: _static/prt.png
+        :link: examples/prt.ipynb
+        :text-align: center
+
 Installation
 ------------
 
@@ -42,7 +47,7 @@ Roadmap
 - :strike:`Neutron detection: tools and scripts for neutron detection post processing`
 - Neutronics: tools to facilitate building `OpenMC <https://docs.openmc.org/en/stable/>`_ models
 - Tritium transport: tools to facilitate building `FESTIM <https://github.com/festim-dev/festim>`_ tritium transport models
-- Code coverage with `codecov <https://about.codecov.io/>`_
+- :strike:`Code coverage with Codecov`
 
 
 .. toctree::
