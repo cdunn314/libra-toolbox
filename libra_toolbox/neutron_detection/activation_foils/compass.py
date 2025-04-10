@@ -25,7 +25,7 @@ def get_channel(filename):
     return int(filename.split('@')[0][7:])
 
 
-def sort_compass_files(directory):
+def sort_compass_files(directory: str) -> dict:
     """ Gets Compass csv data filenames
     and sorts them according to channel and ending number.
     The filenames need to be sorted by ending number because only
