@@ -113,3 +113,72 @@ def test_get_count_rate(bin_time: float, count_rate_real: float):
 
     # test
     assert np.allclose(count_rates, count_rate_real)
+
+
+@pytest.mark.parametrize(
+    "ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window, expected",
+    [
+        # Test case 1: Simple match within time window
+        (
+            [1.0, 2.0, 3.0],
+            [1.1, 2.1, 3.1],
+            [10, 20, 30],
+            [15, 25, 35],
+            0.2,
+            (
+                [1.0, 2.0, 3.0],
+                [1.1, 2.1, 3.1],
+                [10, 20, 30],
+                [15, 25, 35],
+            ),
+        ),
+        # Test case 2: No match due to time window
+        (
+            [1.0, 2.0, 3.0],
+            [4.0, 5.0, 6.0],
+            [10, 20, 30],
+            [15, 25, 35],
+            0.1,
+            ([], [], [], []),
+        ),
+        # Test case 3: Partial match
+        (
+            [1.0, 2.0, 3.0],
+            [1.05, 5.0, 3.05],
+            [10, 20, 30],
+            [15, 25, 35],
+            0.1,
+            (
+                [1.0, 3.0],
+                [1.05, 3.05],
+                [10, 30],
+                [15, 35],
+            ),
+        ),
+        # Test case 4: Empty input
+        (
+            [],
+            [],
+            [],
+            [],
+            0.1,
+            ([], [], [], []),
+        ),
+    ],
+)
+def test_COINC_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window, expected):
+    """
+    Test the COINC_2 function.
+    This function checks if the coincidence detection works correctly
+    for two channels within a given time window.
+
+    Args:
+        ch1_time: List of timestamps for channel 1.
+        ch2_time: List of timestamps for channel 2.
+        ch1_ampl: List of amplitudes for channel 1.
+        ch2_ampl: List of amplitudes for channel 2.
+        t_window: Time window for coincidence detection.
+        expected: Expected output (time and amplitude matches).
+    """
+    result = prt.COINC_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window)
+    assert result == expected
