@@ -219,52 +219,37 @@ def coinc_4(
 def coinc_2_ANTI_1(
     Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, Ch3_AMPL, t_window
 ):
+    Ch1_TIME = np.asarray(Ch1_TIME)
+    Ch2_TIME = np.asarray(Ch2_TIME)
+    Ch3_TIME = np.asarray(Ch3_TIME)
+    Ch1_AMPL = np.asarray(Ch1_AMPL)
+    Ch2_AMPL = np.asarray(Ch2_AMPL)
 
-    pos_Ch1, pos_Ch2, pos_Ch3 = 0, 0, 0
+    # Step 1: Find all time differences
+    time_diff = np.abs(Ch1_TIME[:, None] - Ch2_TIME[None, :])
+    match_indices = np.where(time_diff <= t_window)
+    i1 = match_indices[0]
+    i2 = match_indices[1]
 
-    length_Ch1 = len(Ch1_AMPL)
-    length_Ch2 = len(Ch2_AMPL)
-    length_Ch3 = len(Ch3_TIME)
+    if len(i1) == 0:
+        return np.array([]), np.array([]), np.array([]), np.array([])
 
-    aaccepted_ampl_1 = []
-    aaccepted_time_1 = []
+    # Step 2: Compute t_min and t_max for matched pairs
+    t_min = np.minimum(Ch1_TIME[i1], Ch2_TIME[i2])
+    t_max = t_min + t_window
 
-    aaccepted_ampl_2 = []
-    aaccepted_time_2 = []
+    # Step 3: Use searchsorted to check if any Ch3 event is in [t_min, t_max]
+    idx_start = np.searchsorted(Ch3_TIME, t_min, side="left")
+    idx_end = np.searchsorted(Ch3_TIME, t_max, side="right")
+    is_anticoinc = idx_start == idx_end  # True if no Ch3 event in window
 
-    while pos_Ch1 < length_Ch1 and pos_Ch2 < length_Ch2:
-        min_val = min(Ch1_TIME[pos_Ch1], Ch2_TIME[pos_Ch2])
-        max_val = max(Ch1_TIME[pos_Ch1], Ch2_TIME[pos_Ch2])
-
-        CH3_IS_ANTI = True
-        while Ch3_TIME[pos_Ch3] <= min_val + t_window:
-            if Ch3_TIME[pos_Ch3] >= min_val:
-                CH3_IS_ANTI = False
-                break
-
-            if pos_Ch3 < length_Ch3 - 1:
-                pos_Ch3 += 1
-            else:
-                break
-
-        if max_val - min_val <= t_window and CH3_IS_ANTI:
-
-            aaccepted_ampl_1.append(Ch1_AMPL[pos_Ch1])
-            aaccepted_time_1.append(Ch1_TIME[pos_Ch1])
-
-            aaccepted_ampl_2.append(Ch2_AMPL[pos_Ch2])
-            aaccepted_time_2.append(Ch2_TIME[pos_Ch2])
-
-            pos_Ch1 += 1
-            pos_Ch2 += 1
-
-        else:
-            if min_val == Ch1_TIME[pos_Ch1]:
-                pos_Ch1 += 1
-            if min_val == Ch2_TIME[pos_Ch2]:
-                pos_Ch2 += 1
-
-    return aaccepted_time_1, aaccepted_time_2, aaccepted_ampl_1, aaccepted_ampl_2
+    # Step 4: Return only accepted coincidences
+    return (
+        Ch1_TIME[i1[is_anticoinc]],
+        Ch2_TIME[i2[is_anticoinc]],
+        Ch1_AMPL[i1[is_anticoinc]],
+        Ch2_AMPL[i2[is_anticoinc]],
+    )
 
 
 def coinc_3_ANTI_1(
@@ -278,65 +263,67 @@ def coinc_3_ANTI_1(
     Ch4_AMPL,
     t_window,
 ):
-    pos_Ch1, pos_Ch2, pos_Ch3, pos_Ch4 = 0, 0, 0, 0
+    Ch1_TIME = np.asarray(Ch1_TIME)
+    Ch2_TIME = np.asarray(Ch2_TIME)
+    Ch3_TIME = np.asarray(Ch3_TIME)
+    Ch4_TIME = np.sort(np.asarray(Ch4_TIME))  # must be sorted for searchsorted
 
-    length_Ch1 = len(Ch1_AMPL)
-    length_Ch2 = len(Ch2_AMPL)
-    length_Ch3 = len(Ch3_AMPL)
-    length_Ch4 = len(Ch4_TIME)
+    Ch1_AMPL = np.asarray(Ch1_AMPL)
+    Ch2_AMPL = np.asarray(Ch2_AMPL)
+    Ch3_AMPL = np.asarray(Ch3_AMPL)
 
-    aaccepted_ampl_1 = []
-    aaccepted_time_1 = []
+    # Step 1: Coincidences between Ch1 and Ch2
+    diff12 = np.abs(Ch1_TIME[:, None] - Ch2_TIME[None, :])
+    i1, i2 = np.where(diff12 <= t_window)
 
-    aaccepted_ampl_2 = []
-    aaccepted_time_2 = []
+    if len(i1) == 0:
+        return (
+            np.array([]),
+            np.array([]),
+            np.array([]),
+            np.array([]),
+            np.array([]),
+            np.array([]),
+        )
 
-    aaccepted_ampl_3 = []
-    aaccepted_time_3 = []
+    # Step 2: Now for each (Ch1, Ch2) pair, find matching Ch3
+    t12_avg = 0.5 * (Ch1_TIME[i1] + Ch2_TIME[i2])
+    diff13 = np.abs(t12_avg[:, None] - Ch3_TIME[None, :])
+    i_comb, i3 = np.where(diff13 <= t_window)
 
-    while pos_Ch1 < length_Ch1 and pos_Ch2 < length_Ch2 and pos_Ch3 < length_Ch3:
-        min_val = min(Ch1_TIME[pos_Ch1], Ch2_TIME[pos_Ch2], Ch3_TIME[pos_Ch3])
-        max_val = max(Ch1_TIME[pos_Ch1], Ch2_TIME[pos_Ch2], Ch3_TIME[pos_Ch3])
+    # Keep only valid triplets (Ch1[i1[i_comb]], Ch2[i2[i_comb]], Ch3[i3])
+    if len(i_comb) == 0:
+        return (
+            np.array([]),
+            np.array([]),
+            np.array([]),
+            np.array([]),
+            np.array([]),
+            np.array([]),
+        )
 
-        CH4_IS_ANTI = True
-        while Ch4_TIME[pos_Ch4] <= min_val + t_window:
-            if Ch4_TIME[pos_Ch4] >= min_val:
-                CH4_IS_ANTI = False
-                break
+    final_i1 = i1[i_comb]
+    final_i2 = i2[i_comb]
+    final_i3 = i3
 
-            if pos_Ch4 < length_Ch4 - 1:
-                pos_Ch4 += 1
-            else:
-                break
+    # Step 3: Anti-coincidence with Ch4
+    t_min = np.minimum.reduce(
+        [Ch1_TIME[final_i1], Ch2_TIME[final_i2], Ch3_TIME[final_i3]]
+    )
+    t_max = t_min + t_window
 
-        if max_val - min_val <= t_window and CH4_IS_ANTI:
-            aaccepted_ampl_1.append(Ch1_AMPL[pos_Ch1])
-            aaccepted_time_1.append(Ch1_TIME[pos_Ch1])
+    idx_start = np.searchsorted(Ch4_TIME, t_min, side="left")
+    idx_end = np.searchsorted(Ch4_TIME, t_max, side="right")
+    is_anticoinc = idx_start == idx_end
 
-            aaccepted_ampl_2.append(Ch2_AMPL[pos_Ch2])
-            aaccepted_time_2.append(Ch2_TIME[pos_Ch2])
-
-            aaccepted_ampl_3.append(Ch3_AMPL[pos_Ch3])
-            aaccepted_time_3.append(Ch3_TIME[pos_Ch3])
-
-            pos_Ch1 += 1
-            pos_Ch2 += 1
-            pos_Ch3 += 1
-        else:
-            if min_val == Ch1_TIME[pos_Ch1]:
-                pos_Ch1 += 1
-            if min_val == Ch2_TIME[pos_Ch2]:
-                pos_Ch2 += 1
-            if min_val == Ch3_TIME[pos_Ch3]:
-                pos_Ch3 += 1
-
+    # Step 4: Return accepted triples (not coincident with Ch4)
     return (
-        aaccepted_time_1,
-        aaccepted_time_2,
-        aaccepted_time_3,
-        aaccepted_ampl_1,
-        aaccepted_ampl_2,
-        aaccepted_ampl_3,
+        Ch1_TIME[final_i1[is_anticoinc]],
+        Ch2_TIME[final_i2[is_anticoinc]],
+        Ch3_TIME[final_i3[is_anticoinc]],
+        Ch1_AMPL[final_i1[is_anticoinc]],
+        Ch2_AMPL[final_i2[is_anticoinc]],
+        Ch3_AMPL[final_i3[is_anticoinc]],
     )
 
 

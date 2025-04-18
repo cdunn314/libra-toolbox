@@ -417,6 +417,377 @@ def test_coinc_4(
 
 
 @pytest.mark.parametrize(
+    "ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window, expected",
+    [
+        # Test case 1: Coincidence between Ch1 and Ch2, no events in Ch3
+        (
+            [1.0, 2.0, 3.0],  # Ch1_TIME
+            [1.1, 2.1, 3.1],  # Ch2_TIME
+            [4.0, 5.0, 6.0],  # Ch3_TIME (no overlap)
+            [10, 20, 30],  # Ch1_AMPL
+            [15, 25, 35],  # Ch2_AMPL
+            [12, 22, 32],  # Ch3_AMPL
+            0.2,  # t_window
+            (
+                [1.0, 2.0, 3.0],  # Ch1_TIME (coincidence)
+                [1.1, 2.1, 3.1],  # Ch2_TIME (coincidence)
+                [10, 20, 30],  # Ch1_AMPL
+                [15, 25, 35],  # Ch2_AMPL
+            ),
+        ),
+        # Test case 2: Coincidence between Ch1 and Ch2, but Ch3 overlaps for first event
+        (
+            [1.0, 2.0, 3.0],  # Ch1_TIME
+            [1.1, 2.1, 3.1],  # Ch2_TIME
+            [1.05, 4, 5],  # Ch3_TIME
+            [10, 20, 30],  # Ch1_AMPL
+            [15, 25, 35],  # Ch2_AMPL
+            [12, 22, 32],  # Ch3_AMPL
+            0.2,  # t_window
+            (
+                [2.0, 3.0],  # Ch1_TIME (coincidence)
+                [2.1, 3.1],  # Ch2_TIME (coincidence)
+                [20, 30],  # Ch1_AMPL
+                [25, 35],  # Ch2_AMPL
+            ),
+        ),
+        # Test case 3: No matches between Ch1 and Ch2
+        (
+            [1.0, 2.0, 3.0],  # Ch1_TIME
+            [4.0, 5.0, 6.0],  # Ch2_TIME (no overlap)
+            [7.0, 8.0, 9.0],  # Ch3_TIME
+            [10, 20, 30],  # Ch1_AMPL
+            [15, 25, 35],  # Ch2_AMPL
+            [12, 22, 32],  # Ch3_AMPL
+            0.2,  # t_window
+            (
+                [],  # No valid Ch1_TIME
+                [],  # No valid Ch2_TIME
+                [],  # No valid Ch1_AMPL
+                [],  # No valid Ch2_AMPL
+            ),
+        ),
+        # Test case 4: Empty input
+        (
+            [],  # Ch1_TIME
+            [],  # Ch2_TIME
+            [],  # Ch3_TIME
+            [],  # Ch1_AMPL
+            [],  # Ch2_AMPL
+            [],  # Ch3_AMPL
+            0.2,  # t_window
+            (
+                [],  # No valid Ch1_TIME
+                [],  # No valid Ch2_TIME
+                [],  # No valid Ch1_AMPL
+                [],  # No valid Ch2_AMPL
+            ),
+        ),
+    ],
+)
+def test_coinc_2_ANTI_1(
+    ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window, expected
+):
+    """
+    Test the coinc_2_ANTI_1 function.
+    This function checks if the coincidence detection works correctly
+    for two channels with anti-coincidence on a third channel.
+
+    Args:
+        ch1_time: List of timestamps for channel 1.
+        ch2_time: List of timestamps for channel 2.
+        ch3_time: List of timestamps for channel 3 (anti-coincidence).
+        ch1_ampl: List of amplitudes for channel 1.
+        ch2_ampl: List of amplitudes for channel 2.
+        ch3_ampl: List of amplitudes for channel 3.
+        t_window: Time window for coincidence detection.
+        expected: Expected output (time and amplitude matches).
+    """
+    result = prt.coinc_2_ANTI_1(
+        ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window
+    )
+
+    # Convert result to lists for comparison
+    result = tuple(r.tolist() for r in result)
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "ch1_time, ch2_time, ch3_time, ch4_time, ch1_ampl, ch2_ampl, ch3_ampl, ch4_ampl, t_window, expected",
+    [
+        # Test case 1: Coincidence between Ch1, Ch2, and Ch3, no events in Ch4
+        (
+            [1.0, 2.0, 3.0],  # Ch1_TIME
+            [1.1, 2.1, 3.1],  # Ch2_TIME
+            [1.05, 2.05, 3.05],  # Ch3_TIME
+            [4.0, 5.0, 6.0],  # Ch4_TIME (no overlap)
+            [10, 20, 30],  # Ch1_AMPL
+            [15, 25, 35],  # Ch2_AMPL
+            [12, 22, 32],  # Ch3_AMPL
+            [14, 24, 34],  # Ch4_AMPL
+            0.2,  # t_window
+            (
+                [1.0, 2.0, 3.0],  # Ch1_TIME
+                [1.1, 2.1, 3.1],  # Ch2_TIME
+                [1.05, 2.05, 3.05],  # Ch3_TIME
+                [10, 20, 30],  # Ch1_AMPL
+                [15, 25, 35],  # Ch2_AMPL
+                [12, 22, 32],  # Ch3_AMPL
+            ),
+        ),
+        # Test case 2: Coincidence between Ch1, Ch2, and Ch3, but Ch4 overlaps
+        (
+            [1.0, 2.0, 3.0],  # Ch1_TIME
+            [1.1, 2.1, 3.1],  # Ch2_TIME
+            [1.05, 2.05, 3.05],  # Ch3_TIME
+            [1.02, 4, 5],  # Ch4_TIME (overlaps with Ch1, Ch2, and Ch3)
+            [10, 20, 30],  # Ch1_AMPL
+            [15, 25, 35],  # Ch2_AMPL
+            [12, 22, 32],  # Ch3_AMPL
+            [14, 24, 34],  # Ch4_AMPL
+            0.2,  # t_window
+            (
+                [2.0, 3.0],  # Ch1_TIME
+                [2.1, 3.1],  # Ch2_TIME
+                [2.05, 3.05],  # Ch3_TIME
+                [20, 30],  # Ch1_AMPL
+                [25, 35],  # Ch2_AMPL
+                [22, 32],  # Ch3_AMPL
+            ),
+        ),
+        # Test case 3: No matches between Ch1, Ch2, and Ch3
+        (
+            [1.0, 2.0, 3.0],  # Ch1_TIME
+            [4.0, 5.0, 6.0],  # Ch2_TIME (no overlap)
+            [7.0, 8.0, 9.0],  # Ch3_TIME
+            [10.0, 11.0, 12.0],  # Ch4_TIME
+            [10, 20, 30],  # Ch1_AMPL
+            [15, 25, 35],  # Ch2_AMPL
+            [12, 22, 32],  # Ch3_AMPL
+            [14, 24, 34],  # Ch4_AMPL
+            0.2,  # t_window
+            (
+                [],  # No valid Ch1_TIME
+                [],  # No valid Ch2_TIME
+                [],  # No valid Ch3_TIME
+                [],  # No valid Ch1_AMPL
+                [],  # No valid Ch2_AMPL
+                [],  # No valid Ch3_AMPL
+            ),
+        ),
+        # Test case 4: Empty input
+        (
+            [],  # Ch1_TIME
+            [],  # Ch2_TIME
+            [],  # Ch3_TIME
+            [],  # Ch4_TIME
+            [],  # Ch1_AMPL
+            [],  # Ch2_AMPL
+            [],  # Ch3_AMPL
+            [],  # Ch4_AMPL
+            0.2,  # t_window
+            (
+                [],  # No valid Ch1_TIME
+                [],  # No valid Ch2_TIME
+                [],  # No valid Ch3_TIME
+                [],  # No valid Ch1_AMPL
+                [],  # No valid Ch2_AMPL
+                [],  # No valid Ch3_AMPL
+            ),
+        ),
+    ],
+)
+def test_coinc_3_ANTI_1(
+    ch1_time,
+    ch2_time,
+    ch3_time,
+    ch4_time,
+    ch1_ampl,
+    ch2_ampl,
+    ch3_ampl,
+    ch4_ampl,
+    t_window,
+    expected,
+):
+    """
+    Test the coinc_3_ANTI_1 function.
+    This function checks if the coincidence detection works correctly
+    for three channels with anti-coincidence on a fourth channel.
+
+    Args:
+        ch1_time: List of timestamps for channel 1.
+        ch2_time: List of timestamps for channel 2.
+        ch3_time: List of timestamps for channel 3.
+        ch4_time: List of timestamps for channel 4 (anti-coincidence).
+        ch1_ampl: List of amplitudes for channel 1.
+        ch2_ampl: List of amplitudes for channel 2.
+        ch3_ampl: List of amplitudes for channel 3.
+        ch4_ampl: List of amplitudes for channel 4.
+        t_window: Time window for coincidence detection.
+        expected: Expected output (time and amplitude matches).
+    """
+    result = prt.coinc_3_ANTI_1(
+        ch1_time,
+        ch2_time,
+        ch3_time,
+        ch4_time,
+        ch1_ampl,
+        ch2_ampl,
+        ch3_ampl,
+        ch4_ampl,
+        t_window,
+    )
+
+    # Convert result to lists for comparison
+    result = tuple(r.tolist() for r in result)
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "ch1_time, ch2_time, ch3_time, ch4_time, ch1_ampl, ch2_ampl, ch3_ampl, ch4_ampl, t_window, expected",
+    [
+        # Test case 1: Coincidence between Ch1 and Ch2, no events in Ch3 and Ch4
+        (
+            [1.0, 2.0, 3.0],  # Ch1_TIME
+            [1.1, 2.1, 3.1],  # Ch2_TIME
+            [4.0, 5.0, 6.0],  # Ch3_TIME (no overlap)
+            [7.0, 8.0, 9.0],  # Ch4_TIME (no overlap)
+            [10, 20, 30],  # Ch1_AMPL
+            [15, 25, 35],  # Ch2_AMPL
+            [12, 22, 32],  # Ch3_AMPL
+            [14, 24, 34],  # Ch4_AMPL
+            0.2,  # t_window
+            (
+                [1.0, 2.0, 3.0],  # Ch1_TIME
+                [1.1, 2.1, 3.1],  # Ch2_TIME
+                [10, 20, 30],  # Ch1_AMPL
+                [15, 25, 35],  # Ch2_AMPL
+            ),
+        ),
+        # Test case 2: Coincidence between Ch1 and Ch2, but Ch3 overlaps
+        (
+            [1.0, 2.0, 3.0],  # Ch1_TIME
+            [1.1, 2.1, 3.1],  # Ch2_TIME
+            [1.05, 2.05, 5.0],  # Ch3_TIME (overlaps with Ch1 and Ch2)
+            [7.0, 8.0, 9.0],  # Ch4_TIME (no overlap)
+            [10, 20, 30],  # Ch1_AMPL
+            [15, 25, 35],  # Ch2_AMPL
+            [12, 22, 32],  # Ch3_AMPL
+            [14, 24, 34],  # Ch4_AMPL
+            0.2,  # t_window
+            (
+                [3.0],  # Ch1_TIME
+                [3.1],  # Ch2_TIME
+                [30],  # Ch1_AMPL
+                [35],  # Ch2_AMPL
+            ),
+        ),
+        # Test case 3: Coincidence between Ch1 and Ch2, but Ch4 overlaps
+        (
+            [1.0, 2.0, 3.0],  # Ch1_TIME
+            [1.1, 2.1, 3.1],  # Ch2_TIME
+            [4.0, 5.0, 6.0],  # Ch3_TIME (no overlap)
+            [1.05, 2.05, 8.0],  # Ch4_TIME (overlaps with Ch1 and Ch2)
+            [10, 20, 30],  # Ch1_AMPL
+            [15, 25, 35],  # Ch2_AMPL
+            [12, 22, 32],  # Ch3_AMPL
+            [14, 24, 34],  # Ch4_AMPL
+            0.2,  # t_window
+            (
+                [3.0],  # Ch1_TIME
+                [3.1],  # Ch2_TIME
+                [30],  # Ch1_AMPL
+                [35],  # Ch2_AMPL
+            ),
+        ),
+        # Test case 4: No matches between Ch1 and Ch2
+        (
+            [1.0, 2.0, 3.0],  # Ch1_TIME
+            [4.0, 5.0, 6.0],  # Ch2_TIME (no overlap)
+            [7.0, 8.0, 9.0],  # Ch3_TIME
+            [10.0, 11.0, 12.0],  # Ch4_TIME
+            [10, 20, 30],  # Ch1_AMPL
+            [15, 25, 35],  # Ch2_AMPL
+            [12, 22, 32],  # Ch3_AMPL
+            [14, 24, 34],  # Ch4_AMPL
+            0.2,  # t_window
+            (
+                [],  # No valid Ch1_TIME
+                [],  # No valid Ch2_TIME
+                [],  # No valid Ch1_AMPL
+                [],  # No valid Ch2_AMPL
+            ),
+        ),
+        # Test case 5: Empty input
+        (
+            [],  # Ch1_TIME
+            [],  # Ch2_TIME
+            [],  # Ch3_TIME
+            [],  # Ch4_TIME
+            [],  # Ch1_AMPL
+            [],  # Ch2_AMPL
+            [],  # Ch3_AMPL
+            [],  # Ch4_AMPL
+            0.2,  # t_window
+            (
+                [],  # No valid Ch1_TIME
+                [],  # No valid Ch2_TIME
+                [],  # No valid Ch1_AMPL
+                [],  # No valid Ch2_AMPL
+            ),
+        ),
+    ],
+)
+def test_coinc_2_ANTI_2(
+    ch1_time,
+    ch2_time,
+    ch3_time,
+    ch4_time,
+    ch1_ampl,
+    ch2_ampl,
+    ch3_ampl,
+    ch4_ampl,
+    t_window,
+    expected,
+):
+    """
+    Test the coinc_2_ANTI_2 function.
+    This function checks if the coincidence detection works correctly
+    for two channels with anti-coincidence on two other channels.
+
+    Args:
+        ch1_time: List of timestamps for channel 1.
+        ch2_time: List of timestamps for channel 2.
+        ch3_time: List of timestamps for channel 3 (anti-coincidence).
+        ch4_time: List of timestamps for channel 4 (anti-coincidence).
+        ch1_ampl: List of amplitudes for channel 1.
+        ch2_ampl: List of amplitudes for channel 2.
+        ch3_ampl: List of amplitudes for channel 3.
+        ch4_ampl: List of amplitudes for channel 4.
+        t_window: Time window for coincidence detection.
+        expected: Expected output (time and amplitude matches).
+    """
+    result = prt.coinc_2_ANTI_2(
+        ch1_time,
+        ch2_time,
+        ch3_time,
+        ch4_time,
+        ch1_ampl,
+        ch2_ampl,
+        ch3_ampl,
+        ch4_ampl,
+        t_window,
+    )
+
+    # # Convert result to lists for comparison
+    # result = tuple(r.tolist() for r in result)
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
     "A_time, A_ampl, B_time, B_ampl, C_time, C_ampl, D_time, D_ampl, coincidence_window, coincidence_citeria, expected",
     [
         # Test case 1: Coincidence between A and B only
