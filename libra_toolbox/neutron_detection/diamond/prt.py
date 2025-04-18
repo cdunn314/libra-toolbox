@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union, List
 from pathlib import Path
 import h5py
 import numpy as np
@@ -90,7 +90,6 @@ def get_count_rate(
     return count_rates, count_rate_bins
 
 
-# TODO refactor/simplify/remove bits below that aren't needed
 """
 # Coincidence Spectrum Analysis for Diamond Telescope Detector
 
@@ -104,18 +103,45 @@ Changes:
 - vectorised functions using numpy for performance
 - refactoring and abstraction of the common logic
 - removed unused arguments in anti-coincidence functions
+- documentation and type hinting
+- snake_case for function names and variables
 """
 
 
-def coinc_2(Ch1_TIME, Ch2_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
-    Ch1_TIME = np.asarray(Ch1_TIME)
-    Ch2_TIME = np.asarray(Ch2_TIME)
-    Ch1_AMPL = np.asarray(Ch1_AMPL)
-    Ch2_AMPL = np.asarray(Ch2_AMPL)
+def coinc_2(
+    ch1_times: Union[list, np.ndarray],
+    ch2_times: Union[list, np.ndarray],
+    ch1_ampl: Union[list, np.ndarray],
+    ch2_ampl: Union[list, np.ndarray],
+    t_window: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Find coincidences between two channels within a specified time window.
+    For each Ch1 time, find similar times in Ch2 within the time window.
+    The function returns the matched times and amplitudes for both channels.
+
+    Args:
+        ch1_times: the times of events in channel 1
+        ch2_times: the times of events in channel 2
+        ch1_ampl: the amplitudes of events in channel 1
+        ch2_ampl: the amplitudes of events in channel 2
+        t_window: the time window for coincidence detection (in seconds)
+
+    Returns:
+        A tuple of four NumPy arrays:
+            - matched Ch1 times
+            - matched Ch2 times
+            - matched Ch1 amplitudes
+            - matched Ch2 amplitudes
+    """
+    ch1_times = np.asarray(ch1_times)
+    ch2_times = np.asarray(ch2_times)
+    ch1_ampl = np.asarray(ch1_ampl)
+    ch2_ampl = np.asarray(ch2_ampl)
 
     # For each Ch1 time, find window in Ch2 where match is possible
-    idx_start = np.searchsorted(Ch2_TIME, Ch1_TIME - t_window, side="left")
-    idx_end = np.searchsorted(Ch2_TIME, Ch1_TIME + t_window, side="right")
+    idx_start = np.searchsorted(ch2_times, ch1_times - t_window, side="left")
+    idx_end = np.searchsorted(ch2_times, ch1_times + t_window, side="right")
 
     # Keep only those with at least one match
     has_match = idx_start < idx_end
@@ -124,27 +150,56 @@ def coinc_2(Ch1_TIME, Ch2_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
     matched_Ch2_idx = idx_start[has_match]  # First match only
 
     return (
-        Ch1_TIME[matched_Ch1_idx],
-        Ch2_TIME[matched_Ch2_idx],
-        Ch1_AMPL[matched_Ch1_idx],
-        Ch2_AMPL[matched_Ch2_idx],
+        ch1_times[matched_Ch1_idx],
+        ch2_times[matched_Ch2_idx],
+        ch1_ampl[matched_Ch1_idx],
+        ch2_ampl[matched_Ch2_idx],
     )
 
 
-def coinc_3(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, Ch3_AMPL, t_window):
-    Ch1_TIME = np.asarray(Ch1_TIME)
-    Ch2_TIME = np.asarray(Ch2_TIME)
-    Ch3_TIME = np.asarray(Ch3_TIME)
-    Ch1_AMPL = np.asarray(Ch1_AMPL)
-    Ch2_AMPL = np.asarray(Ch2_AMPL)
-    Ch3_AMPL = np.asarray(Ch3_AMPL)
+def coinc_3(
+    ch1_times: Union[list, np.ndarray],
+    ch2_times: Union[list, np.ndarray],
+    ch3_times: Union[list, np.ndarray],
+    ch1_ampl: Union[list, np.ndarray],
+    ch2_ampl: Union[list, np.ndarray],
+    ch3_ampl: Union[list, np.ndarray],
+    t_window: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Find coincidences between three channels within a specified time window.
+    For each Ch1 time, find similar times in Ch2 and Ch3 within the time window.
+    The function returns the matched times and amplitudes for all three channels.
+    Args:
+        ch1_times: the times of events in channel 1
+        ch2_times: the times of events in channel 2
+        ch3_times: the times of events in channel 3
+        ch1_ampl: the amplitudes of events in channel 1
+        ch2_ampl: the amplitudes of events in channel 2
+        ch3_ampl: the amplitudes of events in channel 3
+        t_window: the time window for coincidence detection (in seconds)
+    Returns:
+        A tuple of six NumPy arrays:
+            - matched Ch1 times
+            - matched Ch2 times
+            - matched Ch3 times
+            - matched Ch1 amplitudes
+            - matched Ch2 amplitudes
+            - matched Ch3 amplitudes
+    """
+    ch1_times = np.asarray(ch1_times)
+    ch2_times = np.asarray(ch2_times)
+    ch3_times = np.asarray(ch3_times)
+    ch1_ampl = np.asarray(ch1_ampl)
+    ch2_ampl = np.asarray(ch2_ampl)
+    ch3_ampl = np.asarray(ch3_ampl)
 
     # For each Ch1 time, find window in Ch2 and Ch3
-    idx_start_2 = np.searchsorted(Ch2_TIME, Ch1_TIME - t_window, side="left")
-    idx_end_2 = np.searchsorted(Ch2_TIME, Ch1_TIME + t_window, side="right")
+    idx_start_2 = np.searchsorted(ch2_times, ch1_times - t_window, side="left")
+    idx_end_2 = np.searchsorted(ch2_times, ch1_times + t_window, side="right")
 
-    idx_start_3 = np.searchsorted(Ch3_TIME, Ch1_TIME - t_window, side="left")
-    idx_end_3 = np.searchsorted(Ch3_TIME, Ch1_TIME + t_window, side="right")
+    idx_start_3 = np.searchsorted(ch3_times, ch1_times - t_window, side="left")
+    idx_end_3 = np.searchsorted(ch3_times, ch1_times + t_window, side="right")
 
     # Valid coincidences: Ch1 has at least one match in both Ch2 and Ch3
     has_match = (idx_start_2 < idx_end_2) & (idx_start_3 < idx_end_3)
@@ -153,45 +208,81 @@ def coinc_3(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, Ch3_AMPL, t_window
     matched_Ch3_idx = idx_start_3[has_match]
 
     return (
-        Ch1_TIME[matched_Ch1_idx],
-        Ch2_TIME[matched_Ch2_idx],
-        Ch3_TIME[matched_Ch3_idx],
-        Ch1_AMPL[matched_Ch1_idx],
-        Ch2_AMPL[matched_Ch2_idx],
-        Ch3_AMPL[matched_Ch3_idx],
+        ch1_times[matched_Ch1_idx],
+        ch2_times[matched_Ch2_idx],
+        ch3_times[matched_Ch3_idx],
+        ch1_ampl[matched_Ch1_idx],
+        ch2_ampl[matched_Ch2_idx],
+        ch3_ampl[matched_Ch3_idx],
     )
 
 
 def coinc_4(
-    Ch1_TIME,
-    Ch2_TIME,
-    Ch3_TIME,
-    Ch4_TIME,
-    Ch1_AMPL,
-    Ch2_AMPL,
-    Ch3_AMPL,
-    Ch4_AMPL,
-    t_window,
-):
+    ch1_times: Union[list, np.ndarray],
+    ch2_times: Union[list, np.ndarray],
+    ch3_times: Union[list, np.ndarray],
+    ch4_times: Union[list, np.ndarray],
+    ch1_ampl: Union[list, np.ndarray],
+    ch2_ampl: Union[list, np.ndarray],
+    ch3_ampl: Union[list, np.ndarray],
+    ch4_ampl: Union[list, np.ndarray],
+    t_window: float,
+) -> Tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+]:
+    """
+    Find coincidences between four channels within a specified time window.
+    For each Ch1 time, find similar times in Ch2, Ch3, and Ch4 within the time window.
+    The function returns the matched times and amplitudes for all four channels.
+
+    Args:
+        ch1_times: the times of events in channel 1
+        ch2_times: the times of events in channel 2
+        ch3_times: the times of events in channel 3
+        ch4_times: the times of events in channel 4
+        ch1_ampl: the amplitudes of events in channel 1
+        ch2_ampl: the amplitudes of events in channel 2
+        ch3_ampl: the amplitudes of events in channel 3
+        ch4_ampl: the amplitudes of events in channel 4
+        t_window: the time window for coincidence detection (in seconds)
+
+    Returns:
+        A tuple of eight NumPy arrays:
+            - matched Ch1 times
+            - matched Ch2 times
+            - matched Ch3 times
+            - matched Ch4 times
+            - matched Ch1 amplitudes
+            - matched Ch2 amplitudes
+            - matched Ch3 amplitudes
+            - matched Ch4 amplitudes
+    """
     # Convert to NumPy arrays
-    Ch1_TIME = np.asarray(Ch1_TIME)
-    Ch2_TIME = np.asarray(Ch2_TIME)
-    Ch3_TIME = np.asarray(Ch3_TIME)
-    Ch4_TIME = np.asarray(Ch4_TIME)
-    Ch1_AMPL = np.asarray(Ch1_AMPL)
-    Ch2_AMPL = np.asarray(Ch2_AMPL)
-    Ch3_AMPL = np.asarray(Ch3_AMPL)
-    Ch4_AMPL = np.asarray(Ch4_AMPL)
+    ch1_times = np.asarray(ch1_times)
+    ch2_times = np.asarray(ch2_times)
+    ch3_times = np.asarray(ch3_times)
+    ch4_times = np.asarray(ch4_times)
+    ch1_ampl = np.asarray(ch1_ampl)
+    ch2_ampl = np.asarray(ch2_ampl)
+    ch3_ampl = np.asarray(ch3_ampl)
+    ch4_ampl = np.asarray(ch4_ampl)
 
     # For each Ch1 event, find index range in Ch2/Ch3/Ch4 within time window
-    idx_start_2 = np.searchsorted(Ch2_TIME, Ch1_TIME - t_window, side="left")
-    idx_end_2 = np.searchsorted(Ch2_TIME, Ch1_TIME + t_window, side="right")
+    idx_start_2 = np.searchsorted(ch2_times, ch1_times - t_window, side="left")
+    idx_end_2 = np.searchsorted(ch2_times, ch1_times + t_window, side="right")
 
-    idx_start_3 = np.searchsorted(Ch3_TIME, Ch1_TIME - t_window, side="left")
-    idx_end_3 = np.searchsorted(Ch3_TIME, Ch1_TIME + t_window, side="right")
+    idx_start_3 = np.searchsorted(ch3_times, ch1_times - t_window, side="left")
+    idx_end_3 = np.searchsorted(ch3_times, ch1_times + t_window, side="right")
 
-    idx_start_4 = np.searchsorted(Ch4_TIME, Ch1_TIME - t_window, side="left")
-    idx_end_4 = np.searchsorted(Ch4_TIME, Ch1_TIME + t_window, side="right")
+    idx_start_4 = np.searchsorted(ch4_times, ch1_times - t_window, side="left")
+    idx_end_4 = np.searchsorted(ch4_times, ch1_times + t_window, side="right")
 
     # Valid coincidences must have at least one match in Ch2, Ch3, and Ch4
     has_match = (
@@ -206,26 +297,53 @@ def coinc_4(
     matched_Ch4_idx = idx_start_4[has_match]
 
     return (
-        Ch1_TIME[matched_Ch1_idx],
-        Ch2_TIME[matched_Ch2_idx],
-        Ch3_TIME[matched_Ch3_idx],
-        Ch4_TIME[matched_Ch4_idx],
-        Ch1_AMPL[matched_Ch1_idx],
-        Ch2_AMPL[matched_Ch2_idx],
-        Ch3_AMPL[matched_Ch3_idx],
-        Ch4_AMPL[matched_Ch4_idx],
+        ch1_times[matched_Ch1_idx],
+        ch2_times[matched_Ch2_idx],
+        ch3_times[matched_Ch3_idx],
+        ch4_times[matched_Ch4_idx],
+        ch1_ampl[matched_Ch1_idx],
+        ch2_ampl[matched_Ch2_idx],
+        ch3_ampl[matched_Ch3_idx],
+        ch4_ampl[matched_Ch4_idx],
     )
 
 
-def coinc_2_anti_1(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
-    Ch1_TIME = np.asarray(Ch1_TIME)
-    Ch2_TIME = np.asarray(Ch2_TIME)
-    Ch3_TIME = np.asarray(Ch3_TIME)
-    Ch1_AMPL = np.asarray(Ch1_AMPL)
-    Ch2_AMPL = np.asarray(Ch2_AMPL)
+def coinc_2_anti_1(
+    ch1_times: Union[list, np.ndarray],
+    ch2_times: Union[list, np.ndarray],
+    ch3_times: Union[list, np.ndarray],
+    ch1_ampl: Union[list, np.ndarray],
+    ch2_ampl: Union[list, np.ndarray],
+    t_window: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Find coincidences between two channels (Ch1 and Ch2) and check for anti-coincidence with a third channel (Ch3).
+    For each Ch1 time, find similar times in Ch2 within the time window and check if there are any Ch3 events in that window.
+    The function returns the matched times and amplitudes for Ch1 and Ch2, excluding any events that coincide with Ch3.
+
+    Args:
+        ch1_times: the times of events in channel 1
+        ch2_times: the times of events in channel 2
+        ch3_times: the times of events in channel 3
+        ch1_ampl: the amplitudes of events in channel 1
+        ch2_ampl: the amplitudes of events in channel 2
+        t_window: the time window for coincidence detection (in seconds)
+
+    Returns:
+        A tuple of four NumPy arrays:
+            - matched Ch1 times
+            - matched Ch2 times
+            - matched Ch1 amplitudes
+            - matched Ch2 amplitudes
+    """
+    ch1_times = np.asarray(ch1_times)
+    ch2_times = np.asarray(ch2_times)
+    ch3_times = np.asarray(ch3_times)
+    ch1_ampl = np.asarray(ch1_ampl)
+    ch2_ampl = np.asarray(ch2_ampl)
 
     # Step 1: Find all time differences
-    time_diff = np.abs(Ch1_TIME[:, None] - Ch2_TIME[None, :])
+    time_diff = np.abs(ch1_times[:, None] - ch2_times[None, :])
     match_indices = np.where(time_diff <= t_window)
     i1 = match_indices[0]
     i2 = match_indices[1]
@@ -234,44 +352,69 @@ def coinc_2_anti_1(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
         return np.array([]), np.array([]), np.array([]), np.array([])
 
     # Step 2: Compute t_min and t_max for matched pairs
-    t_min = np.minimum(Ch1_TIME[i1], Ch2_TIME[i2])
+    t_min = np.minimum(ch1_times[i1], ch2_times[i2])
     t_max = t_min + t_window
 
     # Step 3: Use searchsorted to check if any Ch3 event is in [t_min, t_max]
-    idx_start = np.searchsorted(Ch3_TIME, t_min, side="left")
-    idx_end = np.searchsorted(Ch3_TIME, t_max, side="right")
+    idx_start = np.searchsorted(ch3_times, t_min, side="left")
+    idx_end = np.searchsorted(ch3_times, t_max, side="right")
     is_anticoinc = idx_start == idx_end  # True if no Ch3 event in window
 
     # Step 4: Return only accepted coincidences
     return (
-        Ch1_TIME[i1[is_anticoinc]],
-        Ch2_TIME[i2[is_anticoinc]],
-        Ch1_AMPL[i1[is_anticoinc]],
-        Ch2_AMPL[i2[is_anticoinc]],
+        ch1_times[i1[is_anticoinc]],
+        ch2_times[i2[is_anticoinc]],
+        ch1_ampl[i1[is_anticoinc]],
+        ch2_ampl[i2[is_anticoinc]],
     )
 
 
 def coinc_3_anti_1(
-    Ch1_TIME,
-    Ch2_TIME,
-    Ch3_TIME,
-    Ch4_TIME,
-    Ch1_AMPL,
-    Ch2_AMPL,
-    Ch3_AMPL,
-    t_window,
-):
-    Ch1_TIME = np.asarray(Ch1_TIME)
-    Ch2_TIME = np.asarray(Ch2_TIME)
-    Ch3_TIME = np.asarray(Ch3_TIME)
-    Ch4_TIME = np.sort(np.asarray(Ch4_TIME))  # must be sorted for searchsorted
+    ch1_times: Union[list, np.ndarray],
+    ch2_times: Union[list, np.ndarray],
+    ch3_times: Union[list, np.ndarray],
+    ch4_times: Union[list, np.ndarray],
+    ch1_ampl: Union[list, np.ndarray],
+    ch2_ampl: Union[list, np.ndarray],
+    ch3_ampl: Union[list, np.ndarray],
+    t_window: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Find coincidences between three channels (Ch1, Ch2, and Ch3) and check for anti-coincidence with a fourth channel (Ch4).
+    For each Ch1 time, find similar times in Ch2 and Ch3 within the time window and check if there are any Ch4 events in that window.
+    The function returns the matched times and amplitudes for Ch1, Ch2, and Ch3, excluding any events that coincide with Ch4.
 
-    Ch1_AMPL = np.asarray(Ch1_AMPL)
-    Ch2_AMPL = np.asarray(Ch2_AMPL)
-    Ch3_AMPL = np.asarray(Ch3_AMPL)
+    Args:
+        ch1_times: the times of events in channel 1
+        ch2_times: the times of events in channel 2
+        ch3_times: the times of events in channel 3
+        ch4_times: the times of events in channel 4
+        ch1_ampl: the amplitudes of events in channel 1
+        ch2_ampl: the amplitudes of events in channel 2
+        ch3_ampl: the amplitudes of events in channel 3
+        t_window: the time window for coincidence detection (in seconds)
+
+    Returns:
+        A tuple of six NumPy arrays:
+            - matched Ch1 times
+            - matched Ch2 times
+            - matched Ch3 times
+            - matched Ch1 amplitudes
+            - matched Ch2 amplitudes
+            - matched Ch3 amplitudes
+    """
+
+    ch1_times = np.asarray(ch1_times)
+    ch2_times = np.asarray(ch2_times)
+    ch3_times = np.asarray(ch3_times)
+    ch4_times = np.sort(np.asarray(ch4_times))  # must be sorted for searchsorted
+
+    ch1_ampl = np.asarray(ch1_ampl)
+    ch2_ampl = np.asarray(ch2_ampl)
+    ch3_ampl = np.asarray(ch3_ampl)
 
     # Step 1: Coincidences between Ch1 and Ch2
-    diff12 = np.abs(Ch1_TIME[:, None] - Ch2_TIME[None, :])
+    diff12 = np.abs(ch1_times[:, None] - ch2_times[None, :])
     i1, i2 = np.where(diff12 <= t_window)
 
     if len(i1) == 0:
@@ -285,8 +428,8 @@ def coinc_3_anti_1(
         )
 
     # Step 2: Now for each (Ch1, Ch2) pair, find matching Ch3
-    t12_avg = 0.5 * (Ch1_TIME[i1] + Ch2_TIME[i2])
-    diff13 = np.abs(t12_avg[:, None] - Ch3_TIME[None, :])
+    t12_avg = 0.5 * (ch1_times[i1] + ch2_times[i2])
+    diff13 = np.abs(t12_avg[:, None] - ch3_times[None, :])
     i_comb, i3 = np.where(diff13 <= t_window)
 
     # Keep only valid triplets (Ch1[i1[i_comb]], Ch2[i2[i_comb]], Ch3[i3])
@@ -306,60 +449,82 @@ def coinc_3_anti_1(
 
     # Step 3: Anti-coincidence with Ch4
     t_min = np.minimum.reduce(
-        [Ch1_TIME[final_i1], Ch2_TIME[final_i2], Ch3_TIME[final_i3]]
+        [ch1_times[final_i1], ch2_times[final_i2], ch3_times[final_i3]]
     )
     t_max = t_min + t_window
 
-    idx_start = np.searchsorted(Ch4_TIME, t_min, side="left")
-    idx_end = np.searchsorted(Ch4_TIME, t_max, side="right")
+    idx_start = np.searchsorted(ch4_times, t_min, side="left")
+    idx_end = np.searchsorted(ch4_times, t_max, side="right")
     is_anticoinc = idx_start == idx_end
 
     # Step 4: Return accepted triples (not coincident with Ch4)
     return (
-        Ch1_TIME[final_i1[is_anticoinc]],
-        Ch2_TIME[final_i2[is_anticoinc]],
-        Ch3_TIME[final_i3[is_anticoinc]],
-        Ch1_AMPL[final_i1[is_anticoinc]],
-        Ch2_AMPL[final_i2[is_anticoinc]],
-        Ch3_AMPL[final_i3[is_anticoinc]],
+        ch1_times[final_i1[is_anticoinc]],
+        ch2_times[final_i2[is_anticoinc]],
+        ch3_times[final_i3[is_anticoinc]],
+        ch1_ampl[final_i1[is_anticoinc]],
+        ch2_ampl[final_i2[is_anticoinc]],
+        ch3_ampl[final_i3[is_anticoinc]],
     )
 
 
 def coinc_2_anti_2(
-    Ch1_TIME,
-    Ch2_TIME,
-    Ch3_TIME,
-    Ch4_TIME,
-    Ch1_AMPL,
-    Ch2_AMPL,
-    t_window,
-):
-    Ch1_TIME = np.asarray(Ch1_TIME)
-    Ch2_TIME = np.asarray(Ch2_TIME)
-    Ch3_TIME = np.asarray(Ch3_TIME)
-    Ch4_TIME = np.asarray(Ch4_TIME)
+    ch1_times: Union[list, np.ndarray],
+    ch2_times: Union[list, np.ndarray],
+    ch3_times: Union[list, np.ndarray],
+    ch4_times: Union[list, np.ndarray],
+    ch1_ampl: Union[list, np.ndarray],
+    ch2_ampl: Union[list, np.ndarray],
+    t_window: float,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Find coincidences between two channels (Ch1 and Ch2) and check for anti-coincidence with two other channels (Ch3 and Ch4).
+    For each Ch1 time, find similar times in Ch2 within the time window and check if there are any Ch3 or Ch4 events in that window.
+    The function returns the matched times and amplitudes for Ch1 and Ch2, excluding any events that coincide with Ch3 or Ch4.
 
-    Ch1_AMPL = np.asarray(Ch1_AMPL)
-    Ch2_AMPL = np.asarray(Ch2_AMPL)
+    Args:
+        ch1_times: the times of events in channel 1
+        ch2_times: the times of events in channel 2
+        ch3_times: the times of events in channel 3
+        ch4_times: the times of events in channel 4
+        ch1_ampl: the amplitudes of events in channel 1
+        ch2_ampl: the amplitudes of events in channel 2
+        t_window: the time window for coincidence detection (in seconds)
+
+    Returns:
+        A tuple of four NumPy arrays:
+            - matched Ch1 times
+            - matched Ch2 times
+            - matched Ch1 amplitudes
+            - matched Ch2 amplitudes
+    """
+
+    ch1_times = np.asarray(ch1_times)
+    ch2_times = np.asarray(ch2_times)
+    ch3_times = np.asarray(ch3_times)
+    ch4_times = np.asarray(ch4_times)
+
+    ch1_ampl = np.asarray(ch1_ampl)
+    ch2_ampl = np.asarray(ch2_ampl)
 
     # Step 1: Find all coincidences between Ch1 and Ch2
-    diff12 = np.abs(Ch1_TIME[:, None] - Ch2_TIME[None, :])
+    diff12 = np.abs(ch1_times[:, None] - ch2_times[None, :])
     i1, i2 = np.where(diff12 <= t_window)
 
     if len(i1) == 0:
         return np.array([]), np.array([]), np.array([]), np.array([])
 
-    t_min = np.minimum(Ch1_TIME[i1], Ch2_TIME[i2])
+    t_min = np.minimum(ch1_times[i1], ch2_times[i2])
     t_max = t_min + t_window
 
     # Step 2: Check anti-coincidence with Ch3
-    idx3_start = np.searchsorted(Ch3_TIME, t_min, side="left")
-    idx3_end = np.searchsorted(Ch3_TIME, t_max, side="right")
+    idx3_start = np.searchsorted(ch3_times, t_min, side="left")
+    idx3_end = np.searchsorted(ch3_times, t_max, side="right")
     anticoinc_3 = idx3_start == idx3_end
 
     # Step 3: Check anti-coincidence with Ch4
-    idx4_start = np.searchsorted(Ch4_TIME, t_min, side="left")
-    idx4_end = np.searchsorted(Ch4_TIME, t_max, side="right")
+    idx4_start = np.searchsorted(ch4_times, t_min, side="left")
+    idx4_end = np.searchsorted(ch4_times, t_max, side="right")
     anticoinc_4 = idx4_start == idx4_end
 
     is_anticoinc = anticoinc_3 & anticoinc_4
@@ -368,15 +533,18 @@ def coinc_2_anti_2(
     final_i2 = i2[is_anticoinc]
 
     return (
-        Ch1_TIME[final_i1],
-        Ch2_TIME[final_i2],
-        Ch1_AMPL[final_i1],
-        Ch2_AMPL[final_i2],
+        ch1_times[final_i1],
+        ch2_times[final_i2],
+        ch1_ampl[final_i1],
+        ch2_ampl[final_i2],
     )
 
 
 def process_coincidence(
-    grouped_data, coincidence_channels, t_window, coincidence_function
+    grouped_data: List[List[Union[np.ndarray, list]]],
+    coincidence_channels: List[int],
+    t_window: float,
+    coincidence_function: callable,
 ):
     """
     Process coincidence for the given channels using the specified coincidence function.
@@ -398,7 +566,11 @@ def process_coincidence(
 
 
 def process_anti_coincidence(
-    grouped_data, coincidence_channels, anti_channels, t_window, anti_function
+    grouped_data: List[List[Union[np.ndarray, list]]],
+    coincidence_channels: List[int],
+    anti_channels: List[int],
+    t_window: float,
+    anti_function: callable,
 ):
     """
     Process coincidence with anti-coincidence for the given channels.
@@ -425,17 +597,41 @@ def process_anti_coincidence(
 
 
 def calculate_coincidence(
-    A_time,
-    A_ampl,
-    B_time,
-    B_ampl,
-    C_time,
-    C_ampl,
-    D_time,
-    D_ampl,
-    coincidence_window,
-    coincidence_citeria,
-):
+    A_time: Union[list, np.ndarray],
+    A_ampl: Union[list, np.ndarray],
+    B_time: Union[list, np.ndarray],
+    B_ampl: Union[list, np.ndarray],
+    C_time: Union[list, np.ndarray],
+    C_ampl: Union[list, np.ndarray],
+    D_time: Union[list, np.ndarray],
+    D_ampl: Union[list, np.ndarray],
+    coincidence_window: float,
+    coincidence_citeria: Union[list, np.ndarray],
+) -> pd.DataFrame:
+    """
+    Calculate the coincidence spectrum of the PRT detector.
+    The function takes the time and amplitude data for four channels (A, B, C, D) and
+    applies the specified coincidence criteria to find coincidences and anti-coincidences.
+    The results are returned as a pandas DataFrame.
+
+    Args:
+        A_time: time values for channel A
+        A_ampl: amplitude values for channel A
+        B_time: time values for channel B
+        B_ampl: amplitude values for channel B
+        C_time: time values for channel C
+        C_ampl: amplitude values for channel C
+        D_time: time values for channel D
+        D_ampl: amplitude values for channel D
+        coincidence_window: time window for coincidence detection (in seconds)
+        coincidence_citeria: criteria for coincidence and anti-coincidence
+            0: ignore
+            1: coincidence
+            2: anti-coincidence
+
+    Returns:
+        A pandas DataFrame containing the results of the coincidence analysis.
+    """
     # Amplitude in mV
     # Time in s
 
