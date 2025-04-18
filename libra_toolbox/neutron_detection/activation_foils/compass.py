@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import pandas as pd
+from typing import Tuple, Dict
 
 
 def get_channel(filename):
@@ -54,7 +55,7 @@ def sort_compass_files(directory: str) -> dict:
     return data_filenames
 
 
-def get_events(directory):
+def get_events(directory: str) -> Tuple[Dict[int, np.ndarray], Dict[int, np.ndarray]]:
     """
     From a directory with unprocessed Compass data CSV files,
     this returns dictionaries of detector pulse times and energies
@@ -62,7 +63,14 @@ def get_events(directory):
 
     This function is also built to be able to read-in problematic
     Compass CSV files that have been incorrectly post-processed to
-    reduce waveform data."""
+    reduce waveform data.
+
+    Args:
+        directory: directory containing CSV files with Compass data
+
+    Returns:
+        time values and energy values for each channel
+    """
 
     time_values = {}
     energy_values = {}
@@ -71,35 +79,32 @@ def get_events(directory):
 
     for ch in data_filenames.keys():
         # Initialize time_values and energy_values for each channel
-        time_values[ch] = []
-        energy_values[ch] = []
+        time_values[ch] = np.empty(0)
+        energy_values[ch] = np.empty(0)
         for i, filename in enumerate(data_filenames[ch]):
-            # First file has a header, so skip the first row
-            # Eventually, we can use the header to index the values
-            # but since some csv datafiles have been changed without header info,
-            # this is the code that will work
+
+            # only the first file has a header
             if i == 0:
-                skiprows = 1
+                header = 0
             else:
-                skiprows = 0
+                header = None
 
             csv_file_path = os.path.join(directory, filename)
 
-            try:
-                df = pd.read_csv(
-                    csv_file_path, delimiter=";", header=None, skiprows=skiprows
-                )
-            except:
-                raise Exception(f"Could not read in file: {csv_file_path}")
+            df = pd.read_csv(csv_file_path, delimiter=";", header=header)
 
-            time_column = 2
-            energy_column = 3
-            time_data = df[time_column].to_numpy()
-            # print(time_data.shape)
-            energy_data = df[energy_column].to_numpy()
+            # read the header and store in names
+            if i == 0:
+                names = df.columns.values
+            else:
+                # apply the column names if not the first file
+                df.columns = names
+
+            time_data = df["TIMETAG"].to_numpy()
+            energy_data = df["ENERGY"].to_numpy()
 
             # Extract and append the energy data to the list
-            time_values[ch].extend(time_data)
-            # print(len(time_values[source]))
-            energy_values[ch].extend(energy_data)
+            time_values[ch] = np.concatenate([time_values[ch], time_data])
+            energy_values[ch] = np.concatenate([energy_values[ch], energy_data])
+
     return time_values, energy_values
