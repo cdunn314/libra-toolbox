@@ -102,6 +102,7 @@ This code calculates the coincidence energy spectrum of a Diamond Telescope Dete
 
 Changes:
 - vectorised functions using numpy for performance
+- refactoring and abstraction of the common logic
 """
 
 
@@ -410,6 +411,58 @@ def coinc_2_ANTI_2(
     return aaccepted_time_1, aaccepted_time_2, aaccepted_ampl_1, aaccepted_ampl_2
 
 
+def process_coincidence(
+    grouped_data, coincidence_channels, t_window, coincidence_function
+):
+    """
+    Process coincidence for the given channels using the specified coincidence function.
+
+    Args:
+        grouped_data: List of grouped data for all channels.
+        coincidence_channels: Indices of the channels involved in coincidence.
+        t_window: Time window for coincidence detection.
+        coincidence_function: Function to calculate coincidence.
+
+    Returns:
+        Result of the coincidence function.
+    """
+    data = [grouped_data[i] for i in coincidence_channels]
+    times = [d[0] for d in data]
+    amplitudes = [d[1] for d in data]
+
+    return coincidence_function(*times, *amplitudes, t_window)
+
+
+def process_anti_coincidence(
+    grouped_data, coincidence_channels, anti_channels, t_window, anti_function
+):
+    """
+    Process coincidence with anti-coincidence for the given channels.
+
+    Args:
+        grouped_data: List of grouped data for all channels.
+        coincidence_channels: Indices of the channels involved in coincidence.
+        anti_channels: Indices of the channels involved in anti-coincidence.
+        t_window: Time window for coincidence detection.
+        anti_function: Function to calculate coincidence with anti-coincidence.
+
+    Returns:
+        Result of the anti-coincidence function.
+    """
+    coinc_data = [grouped_data[i] for i in coincidence_channels]
+    anti_data = [grouped_data[i] for i in anti_channels]
+
+    coinc_times = [d[0] for d in coinc_data]
+    coinc_amplitudes = [d[1] for d in coinc_data]
+
+    anti_times = [d[0] for d in anti_data]
+    anti_amplitudes = [d[1] for d in anti_data]
+
+    return anti_function(
+        *coinc_times, *anti_times, *coinc_amplitudes, *anti_amplitudes, t_window
+    )
+
+
 def calculate_coincidence(
     A_time,
     A_ampl,
@@ -425,7 +478,7 @@ def calculate_coincidence(
     # Amplitude in mV
     # Time in s
 
-    Channel_names = ["A", "B", "C", "D"]
+    channel_names = ["A", "B", "C", "D"]
     coincidence_citeria = np.array(coincidence_citeria)
 
     grouped_data = [
@@ -435,254 +488,74 @@ def calculate_coincidence(
         [D_time, D_ampl],
     ]
 
-    number_of_ignore = len(np.where(np.array(coincidence_citeria) == 0)[0])
-    number_of_coincidence = len(np.where(np.array(coincidence_citeria) == 1)[0])
-    number_of_anti_coincidence = len(np.where(np.array(coincidence_citeria) == 2)[0])
+    number_of_ignore = len(np.where(coincidence_citeria == 0)[0])
+    number_of_coincidence = len(np.where(coincidence_citeria == 1)[0])
+    number_of_anti_coincidence = len(np.where(coincidence_citeria == 2)[0])
+
     print(
         f"Ignore: {number_of_ignore}, Coincidence: {number_of_coincidence}, Anti-Coincidence: {number_of_anti_coincidence}"
     )
 
-    # Coincidence between two data channels:
-    if number_of_coincidence == 2 and number_of_ignore == 2:
-        which_data_channels = np.where(coincidence_citeria == 1)[0]
+    # Get indices of coincidence and anti-coincidence channels
+    coincidence_channels = np.where(coincidence_citeria == 1)[0]
+    anti_channels = np.where(coincidence_citeria == 2)[0]
 
-        ch1 = Channel_names[which_data_channels[0]]
-        ch2 = Channel_names[which_data_channels[1]]
-        print(f"Coincidence between {ch1} and {ch2}")
-        first_data = grouped_data[which_data_channels[0]]
-        second_data = grouped_data[which_data_channels[1]]
-
-        result = coinc_2(
-            first_data[0],
-            second_data[0],
-            first_data[1],
-            second_data[1],
-            t_window=coincidence_window,
+    # Handle different cases
+    if number_of_coincidence == 2 and number_of_anti_coincidence == 0:
+        result = process_coincidence(
+            grouped_data, coincidence_channels, coincidence_window, coinc_2
         )
-
-        df = pd.DataFrame(
-            {
-                f"{ch1}_time [s]": np.array(result[0]),
-                f"{ch1}_amplitude [mV]": np.array(result[2]),
-                f"{ch2}_time [s]": np.array(result[1]),
-                f"{ch2}_amplitude [mV]": np.array(result[3]),
-                "Sum_amplitude [mV]": np.array(result[2]) + np.array(result[3]),
-            }
+    elif number_of_coincidence == 3 and number_of_anti_coincidence == 0:
+        result = process_coincidence(
+            grouped_data, coincidence_channels, coincidence_window, coinc_3
         )
-        return df
-
-    # Coincidence between three data channels:
-    elif number_of_coincidence == 3 and number_of_ignore == 1:
-        which_data_channels = np.where(coincidence_citeria == 1)[0]
-
-        ch1 = Channel_names[which_data_channels[0]]
-        ch2 = Channel_names[which_data_channels[1]]
-        ch3 = Channel_names[which_data_channels[2]]
-
-        print(f"Coincidence between {ch1}, {ch2} and {ch3}")
-        first_data = grouped_data[which_data_channels[0]]
-        second_data = grouped_data[which_data_channels[1]]
-        third_data = grouped_data[which_data_channels[2]]
-
-        result = coinc_3(
-            first_data[0],
-            second_data[0],
-            third_data[0],
-            first_data[1],
-            second_data[1],
-            third_data[1],
-            t_window=coincidence_window,
-        )
-
-        df = pd.DataFrame(
-            {
-                f"{ch1}_time [s]": np.array(result[0]),
-                f"{ch1}_amplitude [mV]": np.array(result[3]),
-                f"{ch2}_time [s]": np.array(result[1]),
-                f"{ch2}_amplitude [mV]": np.array(result[4]),
-                f"{ch3}_time [s]": np.array(result[2]),
-                f"{ch3}_amplitude [mV]": np.array(result[5]),
-                "Sum_amplitude [mV]": np.array(result[3])
-                + np.array(result[4])
-                + np.array(result[5]),
-            }
-        )
-        return df
-
-    # Coincidence between all four data channels:
     elif number_of_coincidence == 4:
-        which_data_channels = np.where(coincidence_citeria == 1)[0]
-
-        ch1 = Channel_names[which_data_channels[0]]
-        ch2 = Channel_names[which_data_channels[1]]
-        ch3 = Channel_names[which_data_channels[2]]
-        ch4 = Channel_names[which_data_channels[3]]
-
-        print(f"Coincidence between {ch1}, {ch2}, {ch3} and {ch4}")
-        first_data = grouped_data[which_data_channels[0]]
-        second_data = grouped_data[which_data_channels[1]]
-        third_data = grouped_data[which_data_channels[2]]
-        fourth_data = grouped_data[which_data_channels[3]]
-
-        result = coinc_4(
-            first_data[0],
-            second_data[0],
-            third_data[0],
-            fourth_data[0],
-            first_data[1],
-            second_data[1],
-            third_data[1],
-            fourth_data[1],
-            t_window=coincidence_window,
+        result = process_coincidence(
+            grouped_data, coincidence_channels, coincidence_window, coinc_4
         )
-
-        df = pd.DataFrame(
-            {
-                f"{ch1}_time [s]": np.array(result[0]),
-                f"{ch1}_amplitude [mV]": np.array(result[4]),
-                f"{ch2}_time [s]": np.array(result[1]),
-                f"{ch2}_amplitude [mV]": np.array(result[5]),
-                f"{ch3}_time [s]": np.array(result[2]),
-                f"{ch3}_amplitude [mV]": np.array(result[6]),
-                f"{ch4}_time [s]": np.array(result[3]),
-                f"{ch4}_amplitude [mV]": np.array(result[7]),
-                "Sum_amplitude [mV]": np.array(result[4])
-                + np.array(result[5])
-                + np.array(result[6])
-                + np.array(result[7]),
-            }
-        )
-        return df
-
-    # Coincidence between two channels and anti-coincidence with a third one
     elif number_of_coincidence == 2 and number_of_anti_coincidence == 1:
-        which_coinc_data_channels = np.where(coincidence_citeria == 1)[0]
-        which_anti_data_channels = np.where(coincidence_citeria == 2)[0]
-
-        # Coincidence channels:
-        ch1 = Channel_names[which_coinc_data_channels[0]]
-        ch2 = Channel_names[which_coinc_data_channels[1]]
-
-        # Anti-coincidence channel
-        ch3 = Channel_names[which_anti_data_channels[0]]
-
-        print(f"Coincidence between {ch1} and {ch2} and anti-coincidence with {ch3}")
-        first_data = grouped_data[which_coinc_data_channels[0]]
-        second_data = grouped_data[which_coinc_data_channels[1]]
-
-        third_data = grouped_data[which_anti_data_channels[0]]
-
-        result = coinc_2_ANTI_1(
-            first_data[0],
-            second_data[0],
-            third_data[0],
-            first_data[1],
-            second_data[1],
-            third_data[1],
-            t_window=coincidence_window,
+        result = process_anti_coincidence(
+            grouped_data,
+            coincidence_channels,
+            anti_channels,
+            coincidence_window,
+            coinc_2_ANTI_1,
         )
-
-        df = pd.DataFrame(
-            {
-                f"{ch1}_time [s]": np.array(result[0]),
-                f"{ch1}_amplitude [mV]": np.array(result[2]),
-                f"{ch2}_time [s]": np.array(result[1]),
-                f"{ch2}_amplitude [mV]": np.array(result[3]),
-                "Sum_amplitude [mV]": np.array(result[2]) + np.array(result[3]),
-            }
-        )
-        return df
-
-    # Coincidence between three channels and anti-coincidence with a fourth one
     elif number_of_coincidence == 3 and number_of_anti_coincidence == 1:
-        which_coinc_data_channels = np.where(coincidence_citeria == 1)[0]
-        which_anti_data_channels = np.where(coincidence_citeria == 2)[0]
-
-        # Coincidence channels:
-        ch1 = Channel_names[which_coinc_data_channels[0]]
-        ch2 = Channel_names[which_coinc_data_channels[1]]
-        ch3 = Channel_names[which_coinc_data_channels[2]]
-
-        # Anti-coincidence channel
-        ch4 = Channel_names[which_anti_data_channels[0]]
-
-        print(
-            f"Coincidence between {ch1}, {ch2} and {ch3} and anti-coincidence with {ch4}"
+        result = process_anti_coincidence(
+            grouped_data,
+            coincidence_channels,
+            anti_channels,
+            coincidence_window,
+            coinc_3_ANTI_1,
         )
-        first_data = grouped_data[which_coinc_data_channels[0]]
-        second_data = grouped_data[which_coinc_data_channels[1]]
-        third_data = grouped_data[which_coinc_data_channels[2]]
-
-        fourth_data = grouped_data[which_anti_data_channels[0]]
-
-        result = coinc_3_ANTI_1(
-            first_data[0],
-            second_data[0],
-            third_data[0],
-            fourth_data[0],
-            first_data[1],
-            second_data[1],
-            third_data[1],
-            fourth_data[1],
-            t_window=coincidence_window,
-        )
-
-        df = pd.DataFrame(
-            {
-                f"{ch1}_time [s]": np.array(result[0]),
-                f"{ch1}_amplitude [mV]": np.array(result[3]),
-                f"{ch2}_time [s]": np.array(result[1]),
-                f"{ch2}_amplitude [mV]": np.array(result[4]),
-                f"{ch3}_time [s]": np.array(result[2]),
-                f"{ch3}_amplitude [mV]": np.array(result[5]),
-                "Sum_amplitude [mV]": np.array(result[3])
-                + np.array(result[4])
-                + np.array(result[5]),
-            }
-        )
-        return df
-
-    # Coincidence between two channels and anti-coincidence with the remainign two channels
     elif number_of_coincidence == 2 and number_of_anti_coincidence == 2:
-        which_coinc_data_channels = np.where(coincidence_citeria == 1)[0]
-        which_anti_data_channels = np.where(coincidence_citeria == 2)[0]
-
-        # Coincidence channels:
-        ch1 = Channel_names[which_coinc_data_channels[0]]
-        ch2 = Channel_names[which_coinc_data_channels[1]]
-
-        # Anti-coincidence channel
-        ch3 = Channel_names[which_anti_data_channels[0]]
-        ch4 = Channel_names[which_anti_data_channels[1]]
-
-        print(
-            f"Coincidence between {ch1} and {ch2} and anti-coincidence with {ch3}  and {ch4} "
+        result = process_anti_coincidence(
+            grouped_data,
+            coincidence_channels,
+            anti_channels,
+            coincidence_window,
+            coinc_2_ANTI_2,
         )
-        first_data = grouped_data[which_coinc_data_channels[0]]
-        second_data = grouped_data[which_coinc_data_channels[1]]
+    else:
+        raise ValueError("Unsupported combination of coincidence and anti-coincidence.")
 
-        third_data = grouped_data[which_anti_data_channels[0]]
-        fourth_data = grouped_data[which_anti_data_channels[1]]
-
-        result = coinc_2_ANTI_2(
-            first_data[0],
-            second_data[0],
-            third_data[0],
-            fourth_data[0],
-            first_data[1],
-            second_data[1],
-            third_data[1],
-            fourth_data[1],
-            t_window=coincidence_window,
+    # Generate DataFrame dynamically
+    df_data = {}
+    for i, ch_idx in enumerate(coincidence_channels):
+        ch_name = channel_names[ch_idx]
+        df_data[f"{ch_name}_time [s]"] = np.array(result[i])
+        df_data[f"{ch_name}_amplitude [mV]"] = np.array(
+            result[len(coincidence_channels) + i]
         )
 
-        df = pd.DataFrame(
-            {
-                f"{ch1}_time [s]": np.array(result[0]),
-                f"{ch1}_amplitude [mV]": np.array(result[2]),
-                f"{ch2}_time [s]": np.array(result[1]),
-                f"{ch2}_amplitude [mV]": np.array(result[3]),
-                "Sum_amplitude [mV]": np.array(result[2]) + np.array(result[3]),
-            }
+    if number_of_anti_coincidence == 0:
+        df_data["Sum_amplitude [mV]"] = np.sum(
+            [
+                np.array(result[len(coincidence_channels) + i])
+                for i in range(len(coincidence_channels))
+            ],
+            axis=0,
         )
-        return df
+
+    return pd.DataFrame(df_data)
