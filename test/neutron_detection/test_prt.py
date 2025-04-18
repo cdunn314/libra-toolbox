@@ -182,3 +182,208 @@ def test_COINC_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window, expected):
     """
     result = prt.COINC_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window)
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    "ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window, expected",
+    [
+        # Test case 1: All channels match within the time window
+        (
+            [1.0, 2.0, 3.0],
+            [1.1, 2.1, 3.1],
+            [1.15, 2.15, 3.15],
+            [10, 20, 30],
+            [15, 25, 35],
+            [12, 22, 32],
+            0.2,
+            (
+                [1.0, 2.0, 3.0],
+                [1.1, 2.1, 3.1],
+                [1.15, 2.15, 3.15],
+                [10, 20, 30],
+                [15, 25, 35],
+                [12, 22, 32],
+            ),
+        ),
+        # Test case 2: No matches due to time window
+        (
+            [1.0, 2.0, 3.0],
+            [4.0, 5.0, 6.0],
+            [7.0, 8.0, 9.0],
+            [10, 20, 30],
+            [15, 25, 35],
+            [12, 22, 32],
+            0.1,
+            ([], [], [], [], [], []),
+        ),
+        # Test case 3: Partial matches
+        (
+            [1.0, 2.0, 3.0],
+            [1.05, 1.8, 3.05],
+            [1.1, 2.1, 3.1],
+            [10, 20, 30],
+            [15, 25, 35],
+            [12, 22, 32],
+            0.11,
+            (
+                [1.0, 3.0],
+                [1.05, 3.05],
+                [1.1, 3.1],
+                [10, 30],
+                [15, 35],
+                [12, 32],
+            ),
+        ),
+        # Test case 4: Empty input
+        (
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            0.1,
+            ([], [], [], [], [], []),
+        ),
+    ],
+)
+def test_COINC_3(
+    ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window, expected
+):
+    """
+    Test the COINC_3 function.
+    This function checks if the coincidence detection works correctly
+    for three channels within a given time window.
+
+    Args:
+        ch1_time: List of timestamps for channel 1.
+        ch2_time: List of timestamps for channel 2.
+        ch3_time: List of timestamps for channel 3.
+        ch1_ampl: List of amplitudes for channel 1.
+        ch2_ampl: List of amplitudes for channel 2.
+        ch3_ampl: List of amplitudes for channel 3.
+        t_window: Time window for coincidence detection.
+        expected: Expected output (time and amplitude matches).
+    """
+    result = prt.COINC_3(
+        ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window
+    )
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "ch1_time, ch2_time, ch3_time, ch4_time, ch1_ampl, ch2_ampl, ch3_ampl, ch4_ampl, t_window, expected",
+    [
+        # Test case 1: All channels match within the time window
+        (
+            [1.0, 2.0, 3.0],
+            [1.1, 2.1, 3.1],
+            [1.15, 2.15, 3.15],
+            [1.2, 2.2, 3.2],
+            [10, 20, 30],
+            [15, 25, 35],
+            [12, 22, 32],
+            [14, 24, 34],
+            0.3,
+            (
+                [1.0, 2.0, 3.0],
+                [1.1, 2.1, 3.1],
+                [1.15, 2.15, 3.15],
+                [1.2, 2.2, 3.2],
+                [10, 20, 30],
+                [15, 25, 35],
+                [12, 22, 32],
+                [14, 24, 34],
+            ),
+        ),
+        # Test case 2: No matches due to time window
+        (
+            [1.0, 2.0, 3.0],
+            [4.0, 5.0, 6.0],
+            [7.0, 8.0, 9.0],
+            [10.0, 11.0, 12.0],
+            [10, 20, 30],
+            [15, 25, 35],
+            [12, 22, 32],
+            [14, 24, 34],
+            0.1,
+            ([], [], [], [], [], [], [], []),
+        ),
+        # Test case 3: Partial matches
+        (
+            [1.0, 2.0, 3.0],
+            [1.05, 2.05, 5.0],
+            [1.1, 2.1, 3.1],
+            [1.15, 2.15, 3.15],
+            [10, 20, 30],
+            [15, 25, 35],
+            [12, 22, 32],
+            [14, 24, 34],
+            0.2,
+            (
+                [1.0, 2.0],
+                [1.05, 2.05],
+                [1.1, 2.1],
+                [1.15, 2.15],
+                [10, 20],
+                [15, 25],
+                [12, 22],
+                [14, 24],
+            ),
+        ),
+        # Test case 4: Empty input
+        (
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            0.1,
+            ([], [], [], [], [], [], [], []),
+        ),
+    ],
+)
+def test_COINC_4(
+    ch1_time,
+    ch2_time,
+    ch3_time,
+    ch4_time,
+    ch1_ampl,
+    ch2_ampl,
+    ch3_ampl,
+    ch4_ampl,
+    t_window,
+    expected,
+):
+    """
+    Test the COINC_4 function.
+    This function checks if the coincidence detection works correctly
+    for four channels within a given time window.
+
+    Args:
+        ch1_time: List of timestamps for channel 1.
+        ch2_time: List of timestamps for channel 2.
+        ch3_time: List of timestamps for channel 3.
+        ch4_time: List of timestamps for channel 4.
+        ch1_ampl: List of amplitudes for channel 1.
+        ch2_ampl: List of amplitudes for channel 2.
+        ch3_ampl: List of amplitudes for channel 3.
+        ch4_ampl: List of amplitudes for channel 4.
+        t_window: Time window for coincidence detection.
+        expected: Expected output (time and amplitude matches).
+    """
+    result = prt.COINC_4(
+        ch1_time,
+        ch2_time,
+        ch3_time,
+        ch4_time,
+        ch1_ampl,
+        ch2_ampl,
+        ch3_ampl,
+        ch4_ampl,
+        t_window,
+    )
+    assert result == expected
