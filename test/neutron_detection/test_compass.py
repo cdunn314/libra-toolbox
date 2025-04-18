@@ -107,6 +107,11 @@ def test_get_events(expected_time, expected_energy, expected_idx):
     assert isinstance(times, dict)
     assert isinstance(energies, dict)
 
+    expected_keys = [5, 15]
+    for key in expected_keys:
+        assert key in times
+        assert key in energies
+
     ch = 5
     assert times[ch][expected_idx] == expected_time
     assert energies[ch][expected_idx] == expected_energy
