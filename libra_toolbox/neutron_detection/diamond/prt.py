@@ -104,88 +104,57 @@ This code calculates the coincidence energy spectrum of a Diamond Telescope Dete
 
 
 def COINC_2(Ch1_TIME, Ch2_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
-    pos_Ch1 = 0
-    pos_Ch2 = 0
+    Ch1_TIME = np.asarray(Ch1_TIME)
+    Ch2_TIME = np.asarray(Ch2_TIME)
+    Ch1_AMPL = np.asarray(Ch1_AMPL)
+    Ch2_AMPL = np.asarray(Ch2_AMPL)
 
-    length_Ch1 = len(Ch1_AMPL)
-    length_Ch2 = len(Ch2_AMPL)
+    # For each Ch1 time, find window in Ch2 where match is possible
+    idx_start = np.searchsorted(Ch2_TIME, Ch1_TIME - t_window, side="left")
+    idx_end = np.searchsorted(Ch2_TIME, Ch1_TIME + t_window, side="right")
 
-    aaccepted_ampl_1 = []
-    aaccepted_time_1 = []
+    # Keep only those with at least one match
+    has_match = idx_start < idx_end
 
-    aaccepted_ampl_2 = []
-    aaccepted_time_2 = []
+    matched_Ch1_idx = np.flatnonzero(has_match)
+    matched_Ch2_idx = idx_start[has_match]  # First match only
 
-    while pos_Ch1 < length_Ch1 and pos_Ch2 < length_Ch2:
-        diff = Ch1_TIME[pos_Ch1] - Ch2_TIME[pos_Ch2]
-        if abs(diff) <= t_window:
-
-            aaccepted_ampl_1.append(Ch1_AMPL[pos_Ch1])
-            aaccepted_time_1.append(Ch1_TIME[pos_Ch1])
-
-            aaccepted_ampl_2.append(Ch2_AMPL[pos_Ch2])
-            aaccepted_time_2.append(Ch2_TIME[pos_Ch2])
-
-            pos_Ch1 += 1
-            pos_Ch2 += 1
-
-        elif diff < 0:
-            pos_Ch1 += 1
-        else:
-            pos_Ch2 += 1
-
-    return aaccepted_time_1, aaccepted_time_2, aaccepted_ampl_1, aaccepted_ampl_2
+    return (
+        Ch1_TIME[matched_Ch1_idx],
+        Ch2_TIME[matched_Ch2_idx],
+        Ch1_AMPL[matched_Ch1_idx],
+        Ch2_AMPL[matched_Ch2_idx],
+    )
 
 
 def COINC_3(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, Ch3_AMPL, t_window):
+    Ch1_TIME = np.asarray(Ch1_TIME)
+    Ch2_TIME = np.asarray(Ch2_TIME)
+    Ch3_TIME = np.asarray(Ch3_TIME)
+    Ch1_AMPL = np.asarray(Ch1_AMPL)
+    Ch2_AMPL = np.asarray(Ch2_AMPL)
+    Ch3_AMPL = np.asarray(Ch3_AMPL)
 
-    pos_Ch1, pos_Ch2, pos_Ch3 = 0, 0, 0
+    # For each Ch1 time, find window in Ch2 and Ch3
+    idx_start_2 = np.searchsorted(Ch2_TIME, Ch1_TIME - t_window, side="left")
+    idx_end_2 = np.searchsorted(Ch2_TIME, Ch1_TIME + t_window, side="right")
 
-    length_Ch1 = len(Ch1_AMPL)
-    length_Ch2 = len(Ch2_AMPL)
-    length_Ch3 = len(Ch3_AMPL)
+    idx_start_3 = np.searchsorted(Ch3_TIME, Ch1_TIME - t_window, side="left")
+    idx_end_3 = np.searchsorted(Ch3_TIME, Ch1_TIME + t_window, side="right")
 
-    aaccepted_ampl_1 = []
-    aaccepted_time_1 = []
-
-    aaccepted_ampl_2 = []
-    aaccepted_time_2 = []
-
-    aaccepted_ampl_3 = []
-    aaccepted_time_3 = []
-
-    while pos_Ch1 < length_Ch1 and pos_Ch2 < length_Ch2 and pos_Ch3 < length_Ch3:
-        min_val = min(Ch1_TIME[pos_Ch1], Ch2_TIME[pos_Ch2], Ch3_TIME[pos_Ch3])
-        max_val = max(Ch1_TIME[pos_Ch1], Ch2_TIME[pos_Ch2], Ch3_TIME[pos_Ch3])
-
-        if max_val - min_val <= t_window:
-            aaccepted_ampl_1.append(Ch1_AMPL[pos_Ch1])
-            aaccepted_time_1.append(Ch1_TIME[pos_Ch1])
-
-            aaccepted_ampl_2.append(Ch2_AMPL[pos_Ch2])
-            aaccepted_time_2.append(Ch2_TIME[pos_Ch2])
-
-            aaccepted_ampl_3.append(Ch3_AMPL[pos_Ch3])
-            aaccepted_time_3.append(Ch3_TIME[pos_Ch3])
-
-            pos_Ch1 += 1
-            pos_Ch2 += 1
-            pos_Ch3 += 1
-        else:
-            if min_val == Ch1_TIME[pos_Ch1]:
-                pos_Ch1 += 1
-            if min_val == Ch2_TIME[pos_Ch2]:
-                pos_Ch2 += 1
-            if min_val == Ch3_TIME[pos_Ch3]:
-                pos_Ch3 += 1
+    # Valid coincidences: Ch1 has at least one match in both Ch2 and Ch3
+    has_match = (idx_start_2 < idx_end_2) & (idx_start_3 < idx_end_3)
+    matched_Ch1_idx = np.flatnonzero(has_match)
+    matched_Ch2_idx = idx_start_2[has_match]
+    matched_Ch3_idx = idx_start_3[has_match]
 
     return (
-        aaccepted_time_1,
-        aaccepted_time_2,
-        aaccepted_time_3,
-        aaccepted_ampl_1,
-        aaccepted_ampl_2,
-        aaccepted_ampl_3,
+        Ch1_TIME[matched_Ch1_idx],
+        Ch2_TIME[matched_Ch2_idx],
+        Ch3_TIME[matched_Ch3_idx],
+        Ch1_AMPL[matched_Ch1_idx],
+        Ch2_AMPL[matched_Ch2_idx],
+        Ch3_AMPL[matched_Ch3_idx],
     )
 
 
@@ -200,75 +169,47 @@ def COINC_4(
     Ch4_AMPL,
     t_window,
 ):
+    # Convert to NumPy arrays
+    Ch1_TIME = np.asarray(Ch1_TIME)
+    Ch2_TIME = np.asarray(Ch2_TIME)
+    Ch3_TIME = np.asarray(Ch3_TIME)
+    Ch4_TIME = np.asarray(Ch4_TIME)
+    Ch1_AMPL = np.asarray(Ch1_AMPL)
+    Ch2_AMPL = np.asarray(Ch2_AMPL)
+    Ch3_AMPL = np.asarray(Ch3_AMPL)
+    Ch4_AMPL = np.asarray(Ch4_AMPL)
 
-    pos_Ch1, pos_Ch2, pos_Ch3, pos_Ch4 = 0, 0, 0, 0
+    # For each Ch1 event, find index range in Ch2/Ch3/Ch4 within time window
+    idx_start_2 = np.searchsorted(Ch2_TIME, Ch1_TIME - t_window, side="left")
+    idx_end_2 = np.searchsorted(Ch2_TIME, Ch1_TIME + t_window, side="right")
 
-    length_A = len(Ch1_AMPL)
-    length_B = len(Ch2_AMPL)
-    length_C = len(Ch3_AMPL)
-    length_D = len(Ch4_AMPL)
+    idx_start_3 = np.searchsorted(Ch3_TIME, Ch1_TIME - t_window, side="left")
+    idx_end_3 = np.searchsorted(Ch3_TIME, Ch1_TIME + t_window, side="right")
 
-    aaccepted_ampl_1 = []
-    aaccepted_time_1 = []
+    idx_start_4 = np.searchsorted(Ch4_TIME, Ch1_TIME - t_window, side="left")
+    idx_end_4 = np.searchsorted(Ch4_TIME, Ch1_TIME + t_window, side="right")
 
-    aaccepted_ampl_2 = []
-    aaccepted_time_2 = []
+    # Valid coincidences must have at least one match in Ch2, Ch3, and Ch4
+    has_match = (
+        (idx_start_2 < idx_end_2)
+        & (idx_start_3 < idx_end_3)
+        & (idx_start_4 < idx_end_4)
+    )
 
-    aaccepted_ampl_3 = []
-    aaccepted_time_3 = []
-
-    aaccepted_ampl_4 = []
-    aaccepted_time_4 = []
-
-    while (
-        pos_Ch1 < length_A
-        and pos_Ch2 < length_B
-        and pos_Ch3 < length_C
-        and pos_Ch4 < length_D
-    ):
-        min_val = min(
-            Ch1_TIME[pos_Ch1], Ch2_TIME[pos_Ch2], Ch3_TIME[pos_Ch3], Ch4_TIME[pos_Ch4]
-        )
-        max_val = max(
-            Ch1_TIME[pos_Ch1], Ch2_TIME[pos_Ch2], Ch3_TIME[pos_Ch3], Ch4_TIME[pos_Ch4]
-        )
-
-        if max_val - min_val <= t_window:
-            aaccepted_ampl_1.append(Ch1_AMPL[pos_Ch1])
-            aaccepted_time_1.append(Ch1_TIME[pos_Ch1])
-
-            aaccepted_ampl_2.append(Ch2_AMPL[pos_Ch2])
-            aaccepted_time_2.append(Ch2_TIME[pos_Ch2])
-
-            aaccepted_ampl_3.append(Ch3_AMPL[pos_Ch3])
-            aaccepted_time_3.append(Ch3_TIME[pos_Ch3])
-
-            aaccepted_ampl_4.append(Ch4_AMPL[pos_Ch4])
-            aaccepted_time_4.append(Ch4_TIME[pos_Ch4])
-
-            pos_Ch1 += 1
-            pos_Ch2 += 1
-            pos_Ch3 += 1
-            pos_Ch4 += 1
-        else:
-            if min_val == Ch1_TIME[pos_Ch1]:
-                pos_Ch1 += 1
-            if min_val == Ch2_TIME[pos_Ch2]:
-                pos_Ch2 += 1
-            if min_val == Ch3_TIME[pos_Ch3]:
-                pos_Ch3 += 1
-            if min_val == Ch4_TIME[pos_Ch4]:
-                pos_Ch4 += 1
+    matched_Ch1_idx = np.flatnonzero(has_match)
+    matched_Ch2_idx = idx_start_2[has_match]
+    matched_Ch3_idx = idx_start_3[has_match]
+    matched_Ch4_idx = idx_start_4[has_match]
 
     return (
-        aaccepted_time_1,
-        aaccepted_time_2,
-        aaccepted_time_3,
-        aaccepted_time_4,
-        aaccepted_ampl_1,
-        aaccepted_ampl_2,
-        aaccepted_ampl_3,
-        aaccepted_ampl_4,
+        Ch1_TIME[matched_Ch1_idx],
+        Ch2_TIME[matched_Ch2_idx],
+        Ch3_TIME[matched_Ch3_idx],
+        Ch4_TIME[matched_Ch4_idx],
+        Ch1_AMPL[matched_Ch1_idx],
+        Ch2_AMPL[matched_Ch2_idx],
+        Ch3_AMPL[matched_Ch3_idx],
+        Ch4_AMPL[matched_Ch4_idx],
     )
 
 

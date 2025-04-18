@@ -181,6 +181,13 @@ def test_COINC_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window, expected):
         expected: Expected output (time and amplitude matches).
     """
     result = prt.COINC_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window)
+    # convert everything to list
+    result = (
+        result[0].tolist(),
+        result[1].tolist(),
+        result[2].tolist(),
+        result[3].tolist(),
+    )
     assert result == expected
 
 
@@ -267,6 +274,15 @@ def test_COINC_3(
     """
     result = prt.COINC_3(
         ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window
+    )
+    # convert everything to list
+    result = (
+        result[0].tolist(),
+        result[1].tolist(),
+        result[2].tolist(),
+        result[3].tolist(),
+        result[4].tolist(),
+        result[5].tolist(),
     )
     assert result == expected
 
@@ -385,5 +401,16 @@ def test_COINC_4(
         ch3_ampl,
         ch4_ampl,
         t_window,
+    )
+    # convert everything to list
+    result = (
+        result[0].tolist(),
+        result[1].tolist(),
+        result[2].tolist(),
+        result[3].tolist(),
+        result[4].tolist(),
+        result[5].tolist(),
+        result[6].tolist(),
+        result[7].tolist(),
     )
     assert result == expected
