@@ -485,11 +485,11 @@ def test_coinc_4(
         ),
     ],
 )
-def test_coinc_2_ANTI_1(
+def test_coinc_2_anti_1(
     ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window, expected
 ):
     """
-    Test the coinc_2_ANTI_1 function.
+    Test the coinc_2_anti_1 function.
     This function checks if the coincidence detection works correctly
     for two channels with anti-coincidence on a third channel.
 
@@ -503,7 +503,7 @@ def test_coinc_2_ANTI_1(
         t_window: Time window for coincidence detection.
         expected: Expected output (time and amplitude matches).
     """
-    result = prt.coinc_2_ANTI_1(
+    result = prt.coinc_2_anti_1(
         ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window
     )
 
@@ -594,7 +594,7 @@ def test_coinc_2_ANTI_1(
         ),
     ],
 )
-def test_coinc_3_ANTI_1(
+def test_coinc_3_anti_1(
     ch1_time,
     ch2_time,
     ch3_time,
@@ -606,7 +606,7 @@ def test_coinc_3_ANTI_1(
     expected,
 ):
     """
-    Test the coinc_3_ANTI_1 function.
+    Test the coinc_3_anti_1 function.
     This function checks if the coincidence detection works correctly
     for three channels with anti-coincidence on a fourth channel.
 
@@ -621,7 +621,7 @@ def test_coinc_3_ANTI_1(
         t_window: Time window for coincidence detection.
         expected: Expected output (time and amplitude matches).
     """
-    result = prt.coinc_3_ANTI_1(
+    result = prt.coinc_3_anti_1(
         ch1_time,
         ch2_time,
         ch3_time,
@@ -723,7 +723,7 @@ def test_coinc_3_ANTI_1(
         ),
     ],
 )
-def test_coinc_2_ANTI_2(
+def test_coinc_2_anti_2(
     ch1_time,
     ch2_time,
     ch3_time,
@@ -734,7 +734,7 @@ def test_coinc_2_ANTI_2(
     expected,
 ):
     """
-    Test the coinc_2_ANTI_2 function.
+    Test the coinc_2_anti_2 function.
     This function checks if the coincidence detection works correctly
     for two channels with anti-coincidence on two other channels.
 
@@ -748,7 +748,7 @@ def test_coinc_2_ANTI_2(
         t_window: Time window for coincidence detection.
         expected: Expected output (time and amplitude matches).
     """
-    result = prt.coinc_2_ANTI_2(
+    result = prt.coinc_2_anti_2(
         ch1_time,
         ch2_time,
         ch3_time,

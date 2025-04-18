@@ -217,7 +217,7 @@ def coinc_4(
     )
 
 
-def coinc_2_ANTI_1(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
+def coinc_2_anti_1(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
     Ch1_TIME = np.asarray(Ch1_TIME)
     Ch2_TIME = np.asarray(Ch2_TIME)
     Ch3_TIME = np.asarray(Ch3_TIME)
@@ -251,7 +251,7 @@ def coinc_2_ANTI_1(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
     )
 
 
-def coinc_3_ANTI_1(
+def coinc_3_anti_1(
     Ch1_TIME,
     Ch2_TIME,
     Ch3_TIME,
@@ -325,7 +325,7 @@ def coinc_3_ANTI_1(
     )
 
 
-def coinc_2_ANTI_2(
+def coinc_2_anti_2(
     Ch1_TIME,
     Ch2_TIME,
     Ch3_TIME,
@@ -480,7 +480,7 @@ def calculate_coincidence(
             coincidence_channels,
             anti_channels,
             coincidence_window,
-            coinc_2_ANTI_1,
+            coinc_2_anti_1,
         )
     elif number_of_coincidence == 3 and number_of_anti_coincidence == 1:
         result = process_anti_coincidence(
@@ -488,7 +488,7 @@ def calculate_coincidence(
             coincidence_channels,
             anti_channels,
             coincidence_window,
-            coinc_3_ANTI_1,
+            coinc_3_anti_1,
         )
     elif number_of_coincidence == 2 and number_of_anti_coincidence == 2:
         result = process_anti_coincidence(
@@ -496,7 +496,7 @@ def calculate_coincidence(
             coincidence_channels,
             anti_channels,
             coincidence_window,
-            coinc_2_ANTI_2,
+            coinc_2_anti_2,
         )
     else:
         raise ValueError("Unsupported combination of coincidence and anti-coincidence.")
