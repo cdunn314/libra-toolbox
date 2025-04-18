@@ -781,8 +781,8 @@ def test_coinc_2_ANTI_2(
         t_window,
     )
 
-    # # Convert result to lists for comparison
-    # result = tuple(r.tolist() for r in result)
+    # Convert result to lists for comparison
+    result = tuple(r.tolist() for r in result)
 
     assert result == expected
 

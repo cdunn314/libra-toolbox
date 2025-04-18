@@ -338,64 +338,45 @@ def coinc_2_ANTI_2(
     Ch4_AMPL,
     t_window,
 ):
-    # Ch3 and 4 is anti
+    Ch1_TIME = np.asarray(Ch1_TIME)
+    Ch2_TIME = np.asarray(Ch2_TIME)
+    Ch3_TIME = np.asarray(Ch3_TIME)
+    Ch4_TIME = np.asarray(Ch4_TIME)
 
-    pos_Ch1, pos_Ch2, pos_Ch3, pos_Ch4 = 0, 0, 0, 0
+    Ch1_AMPL = np.asarray(Ch1_AMPL)
+    Ch2_AMPL = np.asarray(Ch2_AMPL)
 
-    length_Ch1 = len(Ch1_AMPL)
-    length_Ch2 = len(Ch2_AMPL)
-    length_Ch3 = len(Ch3_TIME)
-    length_Ch4 = len(Ch4_TIME)
+    # Step 1: Find all coincidences between Ch1 and Ch2
+    diff12 = np.abs(Ch1_TIME[:, None] - Ch2_TIME[None, :])
+    i1, i2 = np.where(diff12 <= t_window)
 
-    aaccepted_ampl_1 = []
-    aaccepted_time_1 = []
+    if len(i1) == 0:
+        return np.array([]), np.array([]), np.array([]), np.array([])
 
-    aaccepted_ampl_2 = []
-    aaccepted_time_2 = []
+    t_min = np.minimum(Ch1_TIME[i1], Ch2_TIME[i2])
+    t_max = t_min + t_window
 
-    while pos_Ch1 < length_Ch1 and pos_Ch2 < length_Ch2:
-        min_val = min(Ch1_TIME[pos_Ch1], Ch2_TIME[pos_Ch2])
-        max_val = max(Ch1_TIME[pos_Ch1], Ch2_TIME[pos_Ch2])
+    # Step 2: Check anti-coincidence with Ch3
+    idx3_start = np.searchsorted(Ch3_TIME, t_min, side="left")
+    idx3_end = np.searchsorted(Ch3_TIME, t_max, side="right")
+    anticoinc_3 = idx3_start == idx3_end
 
-        CH3_IS_ANTI = True
-        while Ch3_TIME[pos_Ch3] <= min_val + t_window:
-            if Ch3_TIME[pos_Ch3] >= min_val:
-                CH3_IS_ANTI = False
-                break
+    # Step 3: Check anti-coincidence with Ch4
+    idx4_start = np.searchsorted(Ch4_TIME, t_min, side="left")
+    idx4_end = np.searchsorted(Ch4_TIME, t_max, side="right")
+    anticoinc_4 = idx4_start == idx4_end
 
-            if pos_Ch3 < length_Ch3 - 1:
-                pos_Ch3 += 1
-            else:
-                break
+    is_anticoinc = anticoinc_3 & anticoinc_4
 
-        CH4_IS_ANTI = True
-        while Ch4_TIME[pos_Ch4] <= min_val + t_window:
-            if Ch4_TIME[pos_Ch4] >= min_val:
-                CH4_IS_ANTI = False
-                break
+    final_i1 = i1[is_anticoinc]
+    final_i2 = i2[is_anticoinc]
 
-            if pos_Ch4 < length_Ch4 - 1:
-                pos_Ch4 += 1
-            else:
-                break
-
-        if max_val - min_val <= t_window and CH3_IS_ANTI and CH4_IS_ANTI:
-
-            aaccepted_ampl_1.append(Ch1_AMPL[pos_Ch1])
-            aaccepted_time_1.append(Ch1_TIME[pos_Ch1])
-
-            aaccepted_ampl_2.append(Ch2_AMPL[pos_Ch2])
-            aaccepted_time_2.append(Ch2_TIME[pos_Ch2])
-
-            pos_Ch1 += 1
-            pos_Ch2 += 1
-        else:
-            if min_val == Ch1_TIME[pos_Ch1]:
-                pos_Ch1 += 1
-            if min_val == Ch2_TIME[pos_Ch2]:
-                pos_Ch2 += 1
-
-    return aaccepted_time_1, aaccepted_time_2, aaccepted_ampl_1, aaccepted_ampl_2
+    return (
+        Ch1_TIME[final_i1],
+        Ch2_TIME[final_i2],
+        Ch1_AMPL[final_i1],
+        Ch2_AMPL[final_i2],
+    )
 
 
 def process_coincidence(
