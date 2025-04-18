@@ -100,10 +100,12 @@ This code calculates the coincidence energy spectrum of a Diamond Telescope Dete
 **Contact:** [office@cividec.at](mailto:office@cividec.at) <br>
 **Author:** Julian Melbinger
 
+Changes:
+- vectorised functions using numpy for performance
 """
 
 
-def COINC_2(Ch1_TIME, Ch2_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
+def coinc_2(Ch1_TIME, Ch2_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
     Ch1_TIME = np.asarray(Ch1_TIME)
     Ch2_TIME = np.asarray(Ch2_TIME)
     Ch1_AMPL = np.asarray(Ch1_AMPL)
@@ -127,7 +129,7 @@ def COINC_2(Ch1_TIME, Ch2_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
     )
 
 
-def COINC_3(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, Ch3_AMPL, t_window):
+def coinc_3(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, Ch3_AMPL, t_window):
     Ch1_TIME = np.asarray(Ch1_TIME)
     Ch2_TIME = np.asarray(Ch2_TIME)
     Ch3_TIME = np.asarray(Ch3_TIME)
@@ -158,7 +160,7 @@ def COINC_3(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, Ch3_AMPL, t_window
     )
 
 
-def COINC_4(
+def coinc_4(
     Ch1_TIME,
     Ch2_TIME,
     Ch3_TIME,
@@ -213,7 +215,7 @@ def COINC_4(
     )
 
 
-def COINC_2_ANTI_1(
+def coinc_2_ANTI_1(
     Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, Ch3_AMPL, t_window
 ):
 
@@ -264,7 +266,7 @@ def COINC_2_ANTI_1(
     return aaccepted_time_1, aaccepted_time_2, aaccepted_ampl_1, aaccepted_ampl_2
 
 
-def COINC_3_ANTI_1(
+def coinc_3_ANTI_1(
     Ch1_TIME,
     Ch2_TIME,
     Ch3_TIME,
@@ -337,7 +339,7 @@ def COINC_3_ANTI_1(
     )
 
 
-def COINC_2_ANTI_2(
+def coinc_2_ANTI_2(
     Ch1_TIME,
     Ch2_TIME,
     Ch3_TIME,
@@ -450,7 +452,7 @@ def calculate_coincidence(
         first_data = grouped_data[which_data_channels[0]]
         second_data = grouped_data[which_data_channels[1]]
 
-        result = COINC_2(
+        result = coinc_2(
             first_data[0],
             second_data[0],
             first_data[1],
@@ -482,7 +484,7 @@ def calculate_coincidence(
         second_data = grouped_data[which_data_channels[1]]
         third_data = grouped_data[which_data_channels[2]]
 
-        result = COINC_3(
+        result = coinc_3(
             first_data[0],
             second_data[0],
             third_data[0],
@@ -522,7 +524,7 @@ def calculate_coincidence(
         third_data = grouped_data[which_data_channels[2]]
         fourth_data = grouped_data[which_data_channels[3]]
 
-        result = COINC_4(
+        result = coinc_4(
             first_data[0],
             second_data[0],
             third_data[0],
@@ -570,7 +572,7 @@ def calculate_coincidence(
 
         third_data = grouped_data[which_anti_data_channels[0]]
 
-        result = COINC_2_ANTI_1(
+        result = coinc_2_ANTI_1(
             first_data[0],
             second_data[0],
             third_data[0],
@@ -613,7 +615,7 @@ def calculate_coincidence(
 
         fourth_data = grouped_data[which_anti_data_channels[0]]
 
-        result = COINC_3_ANTI_1(
+        result = coinc_3_ANTI_1(
             first_data[0],
             second_data[0],
             third_data[0],
@@ -662,7 +664,7 @@ def calculate_coincidence(
         third_data = grouped_data[which_anti_data_channels[0]]
         fourth_data = grouped_data[which_anti_data_channels[1]]
 
-        result = COINC_2_ANTI_2(
+        result = coinc_2_ANTI_2(
             first_data[0],
             second_data[0],
             third_data[0],

@@ -166,9 +166,9 @@ def test_get_count_rate(bin_time: float, count_rate_real: float):
         ),
     ],
 )
-def test_COINC_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window, expected):
+def test_coinc_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window, expected):
     """
-    Test the COINC_2 function.
+    Test the coinc_2 function.
     This function checks if the coincidence detection works correctly
     for two channels within a given time window.
 
@@ -180,7 +180,7 @@ def test_COINC_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window, expected):
         t_window: Time window for coincidence detection.
         expected: Expected output (time and amplitude matches).
     """
-    result = prt.COINC_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window)
+    result = prt.coinc_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window)
     # convert everything to list
     result = (
         result[0].tolist(),
@@ -254,11 +254,11 @@ def test_COINC_2(ch1_time, ch2_time, ch1_ampl, ch2_ampl, t_window, expected):
         ),
     ],
 )
-def test_COINC_3(
+def test_coinc_3(
     ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window, expected
 ):
     """
-    Test the COINC_3 function.
+    Test the coinc_3 function.
     This function checks if the coincidence detection works correctly
     for three channels within a given time window.
 
@@ -272,7 +272,7 @@ def test_COINC_3(
         t_window: Time window for coincidence detection.
         expected: Expected output (time and amplitude matches).
     """
-    result = prt.COINC_3(
+    result = prt.coinc_3(
         ch1_time, ch2_time, ch3_time, ch1_ampl, ch2_ampl, ch3_ampl, t_window
     )
     # convert everything to list
@@ -362,7 +362,7 @@ def test_COINC_3(
         ),
     ],
 )
-def test_COINC_4(
+def test_coinc_4(
     ch1_time,
     ch2_time,
     ch3_time,
@@ -375,7 +375,7 @@ def test_COINC_4(
     expected,
 ):
     """
-    Test the COINC_4 function.
+    Test the coinc_4 function.
     This function checks if the coincidence detection works correctly
     for four channels within a given time window.
 
@@ -391,7 +391,7 @@ def test_COINC_4(
         t_window: Time window for coincidence detection.
         expected: Expected output (time and amplitude matches).
     """
-    result = prt.COINC_4(
+    result = prt.coinc_4(
         ch1_time,
         ch2_time,
         ch3_time,
