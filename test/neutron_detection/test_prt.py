@@ -144,9 +144,9 @@ def test_get_count_rate(bin_time: float, count_rate_real: float):
         # Test case 3: Partial match
         (
             [1.0, 2.0, 3.0],
-            [1.05, 5.0, 3.05],
+            [1.05, 3.05, 5.0],
             [10, 20, 30],
-            [15, 25, 35],
+            [15, 35, 25],
             0.1,
             (
                 [1.0, 3.0],
