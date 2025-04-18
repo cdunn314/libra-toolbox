@@ -103,6 +103,7 @@ This code calculates the coincidence energy spectrum of a Diamond Telescope Dete
 Changes:
 - vectorised functions using numpy for performance
 - refactoring and abstraction of the common logic
+- removed unused arguments in anti-coincidence functions
 """
 
 
@@ -216,9 +217,7 @@ def coinc_4(
     )
 
 
-def coinc_2_ANTI_1(
-    Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, Ch3_AMPL, t_window
-):
+def coinc_2_ANTI_1(Ch1_TIME, Ch2_TIME, Ch3_TIME, Ch1_AMPL, Ch2_AMPL, t_window):
     Ch1_TIME = np.asarray(Ch1_TIME)
     Ch2_TIME = np.asarray(Ch2_TIME)
     Ch3_TIME = np.asarray(Ch3_TIME)
@@ -260,7 +259,6 @@ def coinc_3_ANTI_1(
     Ch1_AMPL,
     Ch2_AMPL,
     Ch3_AMPL,
-    Ch4_AMPL,
     t_window,
 ):
     Ch1_TIME = np.asarray(Ch1_TIME)
@@ -334,8 +332,6 @@ def coinc_2_ANTI_2(
     Ch4_TIME,
     Ch1_AMPL,
     Ch2_AMPL,
-    Ch3_AMPL,
-    Ch4_AMPL,
     t_window,
 ):
     Ch1_TIME = np.asarray(Ch1_TIME)
@@ -424,11 +420,8 @@ def process_anti_coincidence(
     coinc_amplitudes = [d[1] for d in coinc_data]
 
     anti_times = [d[0] for d in anti_data]
-    anti_amplitudes = [d[1] for d in anti_data]
 
-    return anti_function(
-        *coinc_times, *anti_times, *coinc_amplitudes, *anti_amplitudes, t_window
-    )
+    return anti_function(*coinc_times, *anti_times, *coinc_amplitudes, t_window)
 
 
 def calculate_coincidence(
