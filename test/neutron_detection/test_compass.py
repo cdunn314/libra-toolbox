@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import os
 from libra_toolbox.neutron_detection.activation_foils import compass
+from pathlib import Path
 
 
 @pytest.mark.parametrize(
@@ -85,3 +86,27 @@ def test_sort_compass_files(tmpdir, base_name: str, expected_filenames: dict):
                 assert np.array_equal(a, b)
             else:
                 assert a == b
+
+
+@pytest.mark.parametrize(
+    "expected_time, expected_energy, expected_idx",
+    [
+        (6685836624, 515, 5),
+        (11116032249, 568, 6),
+        (1623550122, 589, -1),
+        (535148093, 1237, -2),
+    ],
+)
+def test_get_events(expected_time, expected_energy, expected_idx):
+    """
+    Test the get_events function from the compass module.
+    Checks that specific time and energy values are returned for a given channel
+    """
+    test_directory = Path(__file__).parent / "compass_test_data"
+    times, energies = compass.get_events(test_directory)
+    assert isinstance(times, dict)
+    assert isinstance(energies, dict)
+
+    ch = 5
+    assert times[ch][expected_idx] == expected_time
+    assert energies[ch][expected_idx] == expected_energy
