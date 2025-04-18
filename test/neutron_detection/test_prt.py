@@ -414,3 +414,139 @@ def test_coinc_4(
         result[7].tolist(),
     )
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    "A_time, A_ampl, B_time, B_ampl, C_time, C_ampl, D_time, D_ampl, coincidence_window, coincidence_citeria, expected",
+    [
+        # Test case 1: Coincidence between A and B only
+        (
+            [1.0, 2.0, 3.0],  # A_time
+            [10, 20, 30],  # A_ampl
+            [1.1, 2.1, 3.1],  # B_time
+            [15, 25, 35],  # B_ampl
+            [],  # C_time
+            [],  # C_ampl
+            [],  # D_time
+            [],  # D_ampl
+            0.2,  # coincidence_window
+            [1, 1, 0, 0],  # coincidence_citeria
+            {
+                "A_time [s]": [1.0, 2.0, 3.0],
+                "A_amplitude [mV]": [10, 20, 30],
+                "B_time [s]": [1.1, 2.1, 3.1],
+                "B_amplitude [mV]": [15, 25, 35],
+                "Sum_amplitude [mV]": [25, 45, 65],
+            },
+        ),
+        # Test case 2: Coincidence between A, B, and C
+        (
+            [1.0, 2.0, 3.0],  # A_time
+            [10, 20, 30],  # A_ampl
+            [1.1, 2.1, 3.1],  # B_time
+            [15, 25, 35],  # B_ampl
+            [1.05, 2.05, 3.05],  # C_time
+            [12, 22, 32],  # C_ampl
+            [],  # D_time
+            [],  # D_ampl
+            0.2,  # coincidence_window
+            [1, 1, 1, 0],  # coincidence_citeria
+            {
+                "A_time [s]": [1.0, 2.0, 3.0],
+                "A_amplitude [mV]": [10, 20, 30],
+                "B_time [s]": [1.1, 2.1, 3.1],
+                "B_amplitude [mV]": [15, 25, 35],
+                "C_time [s]": [1.05, 2.05, 3.05],
+                "C_amplitude [mV]": [12, 22, 32],
+                "Sum_amplitude [mV]": [37, 67, 97],
+            },
+        ),
+        # Test case 3: Coincidence between A and B with anti-coincidence on C
+        (
+            [1.0, 2.0, 3.0],  # A_time
+            [10, 20, 30],  # A_ampl
+            [1.1, 2.1, 3.1],  # B_time
+            [15, 25, 35],  # B_ampl
+            [1.05, 4, 5],  # C_time
+            [12, 22, 32],  # C_ampl
+            [],  # D_time
+            [],  # D_ampl
+            0.2,  # coincidence_window
+            [1, 1, 2, 0],  # coincidence_citeria
+            {
+                "A_time [s]": [2.0, 3.0],
+                "A_amplitude [mV]": [20, 30],
+                "B_time [s]": [2.1, 3.1],
+                "B_amplitude [mV]": [25, 35],
+            },
+        ),
+        # Test case 4: No matches due to time window
+        (
+            [1.0, 2.0, 3.0],  # A_time
+            [10, 20, 30],  # A_ampl
+            [4.0, 5.0, 6.0],  # B_time
+            [15, 25, 35],  # B_ampl
+            [],  # C_time
+            [],  # C_ampl
+            [],  # D_time
+            [],  # D_ampl
+            0.1,  # coincidence_window
+            [1, 1, 0, 0],  # coincidence_citeria
+            {
+                "A_time [s]": [],
+                "A_amplitude [mV]": [],
+                "B_time [s]": [],
+                "B_amplitude [mV]": [],
+                "Sum_amplitude [mV]": [],
+            },
+        ),
+    ],
+)
+def test_calculate_coincidence(
+    A_time,
+    A_ampl,
+    B_time,
+    B_ampl,
+    C_time,
+    C_ampl,
+    D_time,
+    D_ampl,
+    coincidence_window,
+    coincidence_citeria,
+    expected,
+):
+    """
+    Test the calculate_coincidence function.
+    This function checks if the coincidence detection works correctly
+    for various combinations of channels and criteria.
+
+    Args:
+        A_time: List of timestamps for channel A.
+        A_ampl: List of amplitudes for channel A.
+        B_time: List of timestamps for channel B.
+        B_ampl: List of amplitudes for channel B.
+        C_time: List of timestamps for channel C.
+        C_ampl: List of amplitudes for channel C.
+        D_time: List of timestamps for channel D.
+        D_ampl: List of amplitudes for channel D.
+        coincidence_window: Time window for coincidence detection.
+        coincidence_citeria: List of criteria for coincidence and anti-coincidence.
+        expected: Expected output as a dictionary.
+    """
+    result_df = prt.calculate_coincidence(
+        A_time,
+        A_ampl,
+        B_time,
+        B_ampl,
+        C_time,
+        C_ampl,
+        D_time,
+        D_ampl,
+        coincidence_window,
+        coincidence_citeria,
+    )
+
+    # Convert result DataFrame to dictionary for comparison
+    result = {col: result_df[col].tolist() for col in result_df.columns}
+
+    assert result == expected
