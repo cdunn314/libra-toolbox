@@ -119,10 +119,9 @@ def test_get_events(expected_time, expected_energy, expected_idx):
 
 
 @pytest.mark.parametrize(
-    "directory, expected_start, expected_stop",
+    "start_time, stop_time",
     [
         (
-            Path(__file__).parent / "compass_test_data/times/test1/UNFILTERED",
             datetime.datetime(
                 2024,
                 11,
@@ -145,7 +144,6 @@ def test_get_events(expected_time, expected_energy, expected_idx):
             ),
         ),
         (
-            Path(__file__).parent / "compass_test_data/times/test2/UNFILTERED",
             datetime.datetime(
                 2025,
                 3,
@@ -169,19 +167,71 @@ def test_get_events(expected_time, expected_energy, expected_idx):
         ),
     ],
 )
-def test_get_start_stop_time(directory, expected_start, expected_stop):
+def test_get_start_stop_time(tmpdir, start_time, stop_time):
     """
-    Test the get_start_stop_time function from the compass module.
-    Checks that start and stop datetime.datetime objects are correctly
-    obtained from the run.info file.
+    Tests the get_start_stop_time function from the compass module.
+    Checks that the start and stop times are correctly parsed from the run.info file.
     """
-    start_time, stop_time = compass.get_start_stop_time(directory)
+    # BUILD
+    content = _run_info_content(start_time, stop_time)
 
-    assert isinstance(start_time, datetime.datetime)
-    assert start_time == expected_start
+    # Create another temporary directory
+    tmpdir2 = os.path.join(tmpdir, "tmpdir2")
 
-    assert isinstance(stop_time, datetime.datetime)
-    assert stop_time == expected_stop
+    # create an empty run.info file
+    run_info_path = os.path.join(tmpdir, "run.info")
+
+    # add some stuff
+    with open(run_info_path, "w") as f:
+        f.write(content)
+
+    # RUN
+    start_time_out, stop_time_out = compass.get_start_stop_time(tmpdir2)
+
+    # TEST
+    assert isinstance(start_time_out, datetime.datetime)
+    assert start_time_out == start_time
+
+    assert isinstance(stop_time_out, datetime.datetime)
+    assert stop_time_out == stop_time
+
+
+def _run_info_content(start_time: datetime.datetime, stop_time: datetime.datetime):
+    """
+    Creates a string that simulates the content of a run.info file.
+    """
+    return f"""id=Co60_0_872uCi_19Mar14_241107
+time.start={start_time.strftime("%Y/%m/%d %H:%M:%S.%f%z")}
+time.stop={stop_time.strftime("%Y/%m/%d %H:%M:%S.%f%z")}
+time.real=00:15:00
+board.0-14-292.readout.rate=132.731 kb/s
+board.0-14-292.1.rejections.singles=0.0
+board.0-14-292.1.rejections.pileup=0.0
+board.0-14-292.1.rejections.saturation=1729.15
+board.0-14-292.1.rejections.energy=0.0
+board.0-14-292.1.rejections.psd=0.0
+board.0-14-292.1.rejections.timedistribution=0.0
+board.0-14-292.1.throughput=6950.66
+board.0-14-292.1.icr=7424.44
+board.0-14-292.1.ocr=5253.24
+board.0-14-292.1.calibration.energy.c0=0.0
+board.0-14-292.1.calibration.energy.c1=1.0
+board.0-14-292.1.calibration.energy.c2=0.0
+board.0-14-292.1.calibration.energy.uom=keV
+board.0-14-292.2.rejections.singles=0.0
+board.0-14-292.2.rejections.pileup=0.0
+board.0-14-292.2.rejections.saturation=8.2202
+board.0-14-292.2.rejections.energy=0.0
+board.0-14-292.2.rejections.psd=0.0
+board.0-14-292.2.rejections.timedistribution=0.0
+board.0-14-292.2.throughput=3958.96
+board.0-14-292.2.icr=3981.66
+board.0-14-292.2.ocr=3952.89
+board.0-14-292.2.calibration.energy.c0=0.0
+board.0-14-292.2.calibration.energy.c1=1.0
+board.0-14-292.2.calibration.energy.c2=0.0
+board.0-14-292.2.calibration.energy.uom=keV
+"""
 
 
 def test_filenotfound_error_info():
