@@ -1,7 +1,9 @@
 import numpy as np
 import os
+from pathlib import Path
 import pandas as pd
 from typing import Tuple, Dict
+import datetime
 
 
 def get_channel(filename):
@@ -108,3 +110,31 @@ def get_events(directory: str) -> Tuple[Dict[int, np.ndarray], Dict[int, np.ndar
             energy_values[ch] = np.concatenate([energy_values[ch], energy_data])
 
     return time_values, energy_values
+
+
+def get_start_stop_time(directory: str) -> Tuple[datetime.datetime, datetime.datetime]:
+    """Obtains count start and stop time from the run.info file."""
+
+    info_file = Path(directory).parent / "run.info"
+    if info_file.exists():
+        time_format = "%Y/%m/%d %H:%M:%S.%f%z"
+        with open(info_file, "r") as file:
+            lines = file.readlines()
+    else:
+        raise FileNotFoundError(f"Could not find run.info file in {directory}")
+
+    start_time, stop_time = None, None
+    for line in lines:
+        if "time.start=" in line:
+            # get start time string while cutting off '\n' newline
+            time_string = line.split("=")[1].replace("\n", "")
+            start_time = datetime.datetime.strptime(time_string, time_format)
+        elif "time.stop=" in line:
+            # get stop time string while cutting off '\n' newline
+            time_string = line.split("=")[1].replace("\n", "")
+            stop_time = datetime.datetime.strptime(time_string, time_format)
+
+    if None in (start_time, stop_time):
+        raise ValueError(f"Could not find time.start or time.stop in file {info_file}.")
+    else:
+        return start_time, stop_time

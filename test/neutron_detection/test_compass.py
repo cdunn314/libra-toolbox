@@ -3,6 +3,7 @@ import numpy as np
 import os
 from libra_toolbox.neutron_detection.activation_foils import compass
 from pathlib import Path
+import datetime
 
 
 @pytest.mark.parametrize(
@@ -102,7 +103,7 @@ def test_get_events(expected_time, expected_energy, expected_idx):
     Test the get_events function from the compass module.
     Checks that specific time and energy values are returned for a given channel
     """
-    test_directory = Path(__file__).parent / "compass_test_data"
+    test_directory = Path(__file__).parent / "compass_test_data/events"
     times, energies = compass.get_events(test_directory)
     assert isinstance(times, dict)
     assert isinstance(energies, dict)
@@ -115,3 +116,121 @@ def test_get_events(expected_time, expected_energy, expected_idx):
     ch = 5
     assert times[ch][expected_idx] == expected_time
     assert energies[ch][expected_idx] == expected_energy
+
+
+utc_minus5 = datetime.timezone(datetime.timedelta(hours=-5))
+utc_minus4 = datetime.timezone(datetime.timedelta(hours=-4))
+
+
+@pytest.mark.parametrize(
+    "start_time, stop_time",
+    [
+        (
+            datetime.datetime(
+                2024, 11, 7, 15, 47, 21, microsecond=127000, tzinfo=utc_minus5
+            ),
+            datetime.datetime(
+                2024, 11, 7, 16, 2, 21, microsecond=133000, tzinfo=utc_minus5
+            ),
+        ),
+        (
+            datetime.datetime(
+                2025, 3, 18, 22, 19, 3, microsecond=947000, tzinfo=utc_minus4
+            ),
+            datetime.datetime(
+                2025, 3, 19, 9, 21, 6, microsecond=558000, tzinfo=utc_minus4
+            ),
+        ),
+    ],
+)
+def test_get_start_stop_time(tmpdir, start_time, stop_time):
+    """
+    Tests the get_start_stop_time function from the compass module.
+    Checks that the start and stop times are correctly parsed from the run.info file.
+    """
+    # BUILD
+    content = _run_info_content(start_time, stop_time)
+
+    # Create another temporary directory
+    tmpdir2 = os.path.join(tmpdir, "tmpdir2")
+
+    # create an empty run.info file
+    run_info_path = os.path.join(tmpdir, "run.info")
+
+    # add some stuff
+    with open(run_info_path, "w") as f:
+        f.write(content)
+
+    # RUN
+    start_time_out, stop_time_out = compass.get_start_stop_time(tmpdir2)
+
+    # TEST
+    assert isinstance(start_time_out, datetime.datetime)
+    assert start_time_out == start_time
+
+    assert isinstance(stop_time_out, datetime.datetime)
+    assert stop_time_out == stop_time
+
+
+def _run_info_content(start_time: datetime.datetime, stop_time: datetime.datetime):
+    """
+    Creates a string that simulates the content of a run.info file.
+    """
+    return f"""id=Co60_0_872uCi_19Mar14_241107
+time.start={start_time.strftime("%Y/%m/%d %H:%M:%S.%f%z")}
+time.stop={stop_time.strftime("%Y/%m/%d %H:%M:%S.%f%z")}
+time.real=00:15:00
+board.0-14-292.readout.rate=132.731 kb/s
+board.0-14-292.1.rejections.singles=0.0
+board.0-14-292.1.rejections.pileup=0.0
+board.0-14-292.1.rejections.saturation=1729.15
+board.0-14-292.1.rejections.energy=0.0
+board.0-14-292.1.rejections.psd=0.0
+board.0-14-292.1.rejections.timedistribution=0.0
+board.0-14-292.1.throughput=6950.66
+board.0-14-292.1.icr=7424.44
+board.0-14-292.1.ocr=5253.24
+board.0-14-292.1.calibration.energy.c0=0.0
+board.0-14-292.1.calibration.energy.c1=1.0
+board.0-14-292.1.calibration.energy.c2=0.0
+board.0-14-292.1.calibration.energy.uom=keV
+board.0-14-292.2.rejections.singles=0.0
+board.0-14-292.2.rejections.pileup=0.0
+board.0-14-292.2.rejections.saturation=8.2202
+board.0-14-292.2.rejections.energy=0.0
+board.0-14-292.2.rejections.psd=0.0
+board.0-14-292.2.rejections.timedistribution=0.0
+board.0-14-292.2.throughput=3958.96
+board.0-14-292.2.icr=3981.66
+board.0-14-292.2.ocr=3952.89
+board.0-14-292.2.calibration.energy.c0=0.0
+board.0-14-292.2.calibration.energy.c1=1.0
+board.0-14-292.2.calibration.energy.c2=0.0
+board.0-14-292.2.calibration.energy.uom=keV
+"""
+
+
+def test_filenotfound_error_info():
+    with pytest.raises(FileNotFoundError, match="Could not find run.info"):
+        compass.get_start_stop_time(
+            directory=Path(__file__).parent / "compass_test_data/events"
+        )
+
+
+def test_get_start_stop_time_with_notime(tmpdir):
+    """Creates an empty file run.info and check that an error is raised if can't find time"""
+
+    # Create another temporary directory
+
+    tmpdir2 = os.path.join(tmpdir, "tmpdir2")
+
+    # create an empty run.info file
+    run_info_path = os.path.join(tmpdir, "run.info")
+
+    # add some stuff
+    with open(run_info_path, "w") as f:
+        f.write("coucou\ncoucou\n")
+
+    # run
+    with pytest.raises(ValueError, match="Could not find time.start or time.stop"):
+        compass.get_start_stop_time(tmpdir2)
