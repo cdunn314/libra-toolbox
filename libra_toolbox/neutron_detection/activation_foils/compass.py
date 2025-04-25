@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from pathlib import Path
 import pandas as pd
 from typing import Tuple, Dict
 import datetime
@@ -111,11 +112,11 @@ def get_events(directory: str) -> Tuple[Dict[int, np.ndarray], Dict[int, np.ndar
     return time_values, energy_values
 
 
-def get_start_stop_time(directory):
+def get_start_stop_time(directory: str) -> Tuple[datetime.datetime, datetime.datetime]:
     """Obtains count start and stop time from the run.info file."""
 
-    info_file = os.path.join(directory, "../run.info")
-    if os.path.isfile(info_file):
+    info_file = Path(directory).parent / "run.info"
+    if info_file.exists():
         time_format = "%Y/%m/%d %H:%M:%S.%f%z"
         with open(info_file, "r") as file:
             continue_search = True
