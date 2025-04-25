@@ -119,21 +119,22 @@ def get_start_stop_time(directory: str) -> Tuple[datetime.datetime, datetime.dat
     if info_file.exists():
         time_format = "%Y/%m/%d %H:%M:%S.%f%z"
         with open(info_file, "r") as file:
-            continue_search = True
-            while continue_search:
-                line = file.readline()
-                if "time.start=" in line:
-                    # get start time string while cutting off '\n' newline
-                    time_string = line.split("=")[1][:-1]
-                    start_time = datetime.datetime.strptime(time_string, time_format)
-                elif "time.stop=" in line:
-                    # get stop time string while cutting off '\n' newline
-                    time_string = line.split("=")[1][:-1]
-                    stop_time = datetime.datetime.strptime(time_string, time_format)
-                    continue_search = False
-                elif len(line) == 0:
-                    continue_search = False
+            lines = file.readlines()
     else:
         raise FileNotFoundError(f"Could not find run.info file in {directory}")
 
-    return start_time, stop_time
+    start_time, stop_time = None, None
+    for line in lines:
+        if "time.start=" in line:
+            # get start time string while cutting off '\n' newline
+            time_string = line.split("=")[1].replace("\n", "")
+            start_time = datetime.datetime.strptime(time_string, time_format)
+        elif "time.stop=" in line:
+            # get stop time string while cutting off '\n' newline
+            time_string = line.split("=")[1].replace("\n", "")
+            stop_time = datetime.datetime.strptime(time_string, time_format)
+
+    if None in (start_time, stop_time):
+        raise ValueError(f"Could not find time.start or time.stop in file {info_file}.")
+    else:
+        return start_time, stop_time
