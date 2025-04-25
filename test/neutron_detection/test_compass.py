@@ -118,51 +118,27 @@ def test_get_events(expected_time, expected_energy, expected_idx):
     assert energies[ch][expected_idx] == expected_energy
 
 
+utc_minus5 = datetime.timezone(datetime.timedelta(hours=-5))
+utc_minus4 = datetime.timezone(datetime.timedelta(hours=-4))
+
+
 @pytest.mark.parametrize(
     "start_time, stop_time",
     [
         (
             datetime.datetime(
-                2024,
-                11,
-                7,
-                15,
-                47,
-                21,
-                127000,
-                tzinfo=datetime.timezone(datetime.timedelta(hours=-5)),
+                2024, 11, 7, 15, 47, 21, microsecond=127000, tzinfo=utc_minus5
             ),
             datetime.datetime(
-                2024,
-                11,
-                7,
-                16,
-                2,
-                21,
-                133000,
-                tzinfo=datetime.timezone(datetime.timedelta(hours=-5)),
+                2024, 11, 7, 16, 2, 21, microsecond=133000, tzinfo=utc_minus5
             ),
         ),
         (
             datetime.datetime(
-                2025,
-                3,
-                18,
-                22,
-                19,
-                3,
-                947000,
-                tzinfo=datetime.timezone(datetime.timedelta(hours=-4)),
+                2025, 3, 18, 22, 19, 3, microsecond=947000, tzinfo=utc_minus4
             ),
             datetime.datetime(
-                2025,
-                3,
-                19,
-                9,
-                21,
-                6,
-                558000,
-                tzinfo=datetime.timezone(datetime.timedelta(hours=-4)),
+                2025, 3, 19, 9, 21, 6, microsecond=558000, tzinfo=utc_minus4
             ),
         ),
     ],
