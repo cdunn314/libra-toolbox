@@ -189,3 +189,22 @@ def test_filenotfound_error_info():
         compass.get_start_stop_time(
             directory=Path(__file__).parent / "compass_test_data/events"
         )
+
+
+def test_get_start_stop_time_with_notime(tmpdir):
+    """Creates an empty file run.info and check that an error is raised if can't find time"""
+
+    # Create another temporary directory
+
+    tmpdir2 = os.path.join(tmpdir, "tmpdir2")
+
+    # create an empty run.info file
+    run_info_path = os.path.join(tmpdir, "run.info")
+
+    # add some stuff
+    with open(run_info_path, "w") as f:
+        f.write("coucou\ncoucou\n")
+
+    # run
+    with pytest.raises(ValueError, match="Could not find time.start or time.stop"):
+        compass.get_start_stop_time(tmpdir2)
