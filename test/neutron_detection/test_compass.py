@@ -3,6 +3,7 @@ import numpy as np
 import os
 from libra_toolbox.neutron_detection.activation_foils import compass
 from pathlib import Path
+import datetime
 
 
 @pytest.mark.parametrize(
@@ -102,7 +103,7 @@ def test_get_events(expected_time, expected_energy, expected_idx):
     Test the get_events function from the compass module.
     Checks that specific time and energy values are returned for a given channel
     """
-    test_directory = Path(__file__).parent / "compass_test_data"
+    test_directory = Path(__file__).parent / "compass_test_data/events"
     times, energies = compass.get_events(test_directory)
     assert isinstance(times, dict)
     assert isinstance(energies, dict)
@@ -115,3 +116,69 @@ def test_get_events(expected_time, expected_energy, expected_idx):
     ch = 5
     assert times[ch][expected_idx] == expected_time
     assert energies[ch][expected_idx] == expected_energy
+
+
+@pytest.mark.parametrize(
+    "directory, expected_start, expected_stop",
+    [
+        (
+            Path(__file__).parent / "compass_test_data/times/test1/UNFILTERED",
+            datetime.datetime(
+                2024,
+                11,
+                7,
+                15,
+                47,
+                21,
+                127000,
+                tzinfo=datetime.timezone(datetime.timedelta(hours=-5)),
+            ),
+            datetime.datetime(
+                2024,
+                11,
+                7,
+                16,
+                2,
+                21,
+                133000,
+                tzinfo=datetime.timezone(datetime.timedelta(hours=-5)),
+            ),
+        ),
+        (
+            Path(__file__).parent / "compass_test_data/times/test2/UNFILTERED",
+            datetime.datetime(
+                2025,
+                3,
+                18,
+                22,
+                19,
+                3,
+                947000,
+                tzinfo=datetime.timezone(datetime.timedelta(hours=-4)),
+            ),
+            datetime.datetime(
+                2025,
+                3,
+                19,
+                9,
+                21,
+                6,
+                558000,
+                tzinfo=datetime.timezone(datetime.timedelta(hours=-4)),
+            ),
+        ),
+    ],
+)
+def test_get_start_stop_time(directory, expected_start, expected_stop):
+    """
+    Test the get_start_stop_time function from the compass module.
+    Checks that start and stop datetime.datetime objects are correctly
+    obtained from the run.info file.
+    """
+    start_time, stop_time = compass.get_start_stop_time(directory)
+
+    assert isinstance(start_time, datetime.datetime)
+    assert start_time == expected_start
+
+    assert isinstance(stop_time, datetime.datetime)
+    assert stop_time == expected_stop
