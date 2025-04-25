@@ -182,3 +182,10 @@ def test_get_start_stop_time(directory, expected_start, expected_stop):
 
     assert isinstance(stop_time, datetime.datetime)
     assert stop_time == expected_stop
+
+
+def test_filenotfound_error_info():
+    with pytest.raises(FileNotFoundError, match="Could not find run.info"):
+        compass.get_start_stop_time(
+            directory=Path(__file__).parent / "compass_test_data/events"
+        )
