@@ -144,7 +144,7 @@ def get_start_stop_time(directory: str) -> Tuple[datetime.datetime, datetime.dat
 def get_live_time_from_root(root_filename, channel: int):
     """Gets live and real count time from Compass root file.
     Live time is defined as the difference between the actual time that
-    a count is occuring and the "dead time," in which the output of detector
+    a count is occurring and the "dead time," in which the output of detector
     pulses is saturated such that additional signals cannot be processed."""
 
     with uproot.open(root_filename) as root_file:
