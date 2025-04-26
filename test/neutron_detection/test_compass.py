@@ -234,3 +234,44 @@ def test_get_start_stop_time_with_notime(tmpdir):
     # run
     with pytest.raises(ValueError, match="Could not find time.start or time.stop"):
         compass.get_start_stop_time(tmpdir2)
+
+
+@pytest.mark.parametrize(
+    "root_filename, channel, live_time, real_time",
+    [
+        (
+            Path(__file__).parent
+            / "compass_test_data/times/Hcompass_Co60_20241107.root",
+            1,
+            808.305,
+            900.108,
+        ),
+        (
+            Path(__file__).parent
+            / "compass_test_data/times/Hcompass_Co60_20241107.root",
+            2,
+            896.374,
+            900.108,
+        ),
+        (
+            Path(__file__).parent
+            / "compass_test_data/times/Hcompass_Zirconium_20250319.root",
+            4,
+            35654.785,
+            39722.502,
+        ),
+        (
+            Path(__file__).parent
+            / "compass_test_data/times/Hcompass_Zirconium_20250319.root",
+            5,
+            39678.458,
+            39722.502,
+        ),
+    ],
+)
+def test_get_live_time_from_root(root_filename, channel, live_time, real_time):
+    live_time_out, real_time_out = compass.get_live_time_from_root(
+        root_filename, channel
+    )
+    assert live_time_out == live_time
+    assert real_time_out == real_time

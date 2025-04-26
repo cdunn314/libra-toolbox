@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 from typing import Tuple, Dict
 import datetime
+import uproot
 
 
 def get_channel(filename):
@@ -138,3 +139,15 @@ def get_start_stop_time(directory: str) -> Tuple[datetime.datetime, datetime.dat
         raise ValueError(f"Could not find time.start or time.stop in file {info_file}.")
     else:
         return start_time, stop_time
+
+
+def get_live_time_from_root(root_filename, channel: int):
+    """Gets live and real count time from Compass root file.
+    Live time is defined as the difference between the actual time that
+    a count is occuring and the "dead time," in which the output of detector
+    pulses is saturated such that additional signals cannot be processed."""
+
+    with uproot.open(root_filename) as root_file:
+        live_count_time = root_file[f"LiveTime_{channel}"].members["fMilliSec"] / 1000
+        real_count_time = root_file[f"RealTime_{channel}"].members["fMilliSec"] / 1000
+    return live_count_time, real_count_time
