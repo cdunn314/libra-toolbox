@@ -148,15 +148,7 @@ def get_live_time_from_root(root_filename: str, channel: int) -> Tuple[float, fl
     Gets live and real count time from Compass root file.
     Live time is defined as the difference between the actual time that
     a count is occurring and the "dead time," in which the output of detector
-    pulses is saturated such that additional signals cannot be processed.
-
-    Args:
-        root_filename: the path to the .root file
-        channel: the channel number to get the live time for
-
-    Returns:
-        the live count time in seconds, the real count time in seconds
-    """
+    pulses is saturated such that additional signals cannot be processed."""
 
     with uproot.open(root_filename) as root_file:
         live_count_time = root_file[f"LiveTime_{channel}"].members["fMilliSec"] / 1000
