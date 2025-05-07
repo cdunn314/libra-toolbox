@@ -277,11 +277,13 @@ class Measurement:
             start_time, stop_time = get_start_stop_time(source_dir)
             measurement_object.start_time = start_time
             measurement_object.stop_time = stop_time
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             if info_file_optional:
                 warnings.warn(
                     "run.info file not found. Assuming start and stop time are not needed."
                 )
+            else:
+                raise FileNotFoundError(e)
 
         # Create detectors
         detectors = [Detector(channel_nb=nb) for nb in time_values.keys()]
