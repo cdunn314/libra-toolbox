@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 import os
 from pathlib import Path
 import pandas as pd
@@ -155,10 +156,16 @@ def get_live_time_from_root(root_filename, channel: int):
 
 
 class Detector:
-    events: np.ndarray
+    events: NDArray[Tuple[float, float]]  # type: ignore # Array of (time, energy) pairs
     channel_nb: int
     live_count_time: float
     real_count_time: float
+
+    def __init__(self, channel_nb) -> None:
+        self.channel_nb = channel_nb
+        self.events = np.empty((0, 2))  # Initialize as empty 2D array with 2 columns
+        self.live_count_time = None
+        self.real_count_time = None
 
 
 class Measurement:
@@ -173,36 +180,51 @@ class Measurement:
         self.detectors = []
 
     @classmethod
-    def from_directory(cls, source_dir: str, name: str):
-        # print('Reading in files for {}'.format(source))
-
+    def from_directory(cls, source_dir: str, name: str) -> "Measurement":
         # Get events
         time_values, energy_values = get_events(source_dir)
 
         # Get start and stop time
         start_time, stop_time = get_start_stop_time(source_dir)
 
+        detectors = [Detector(channel_nb=nb) for nb in time_values.keys()]
+
         # Get live and real count times
         root_filename = glob.glob(os.path.join(source_dir, "*.root"))[0]
-        if os.path.isfile(root_filename):
-            for channel in time_values.keys():
+        if not os.path.isfile(root_filename):
+            print("No root file found, assuming all counts are live")
+
+        for detector in detectors:
+            detector.events = np.column_stack(
+                (time_values[detector.channel_nb], energy_values[detector.channel_nb])
+            )
+
+            if os.path.isfile(root_filename):
                 live_count_time, real_count_time = get_live_time_from_root(
-                    root_filename, channel
+                    root_filename, detector.channel_nb
                 )
-        else:
-            real_count_time = (stop_time - start_time).total_seconds()
-            for channel in time_values.keys():
+                detector.live_count_time = live_count_time
+                detector.real_count_time = real_count_time
+            else:
+                real_count_time = (stop_time - start_time).total_seconds()
                 # Assume first and last event correspond to start and stop time of live counts
                 # and convert from picoseconds to seconds
+                ps_to_seconds = 1e-12
                 live_count_time = (
-                    time_values[channel][-1] - time_values[channel][0]
-                ) / 1e12
+                    time_values[detector.channel_nb][-1]
+                    - time_values[detector.channel_nb][0]
+                ) * ps_to_seconds
+                detector.live_count_time = live_count_time
+                detector.real_count_time = real_count_time
 
         measurement_object = cls(
             name=name,
         )
+        measurement_object.start_time = start_time
+        measurement_object.stop_time = stop_time
+        measurement_object.detectors = detectors
 
-        return cls()
+        return measurement_object
 
 
 def get_all_spectra_from_raw(directories):
