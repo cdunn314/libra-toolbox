@@ -203,6 +203,36 @@ class Detector:
 
         return np.histogram(energy_values, bins=real_bins)
 
+    def get_energy_hist_background_substract(
+        self,
+        background_detector: "Detector",
+        bins: Union[int, str, NDArray[np.float64]],
+    ) -> Tuple[np.ndarray, np.ndarray]:
+
+        raw_hist, raw_bin_edges = self.get_energy_hist(bins=bins)
+        background_times = background_detector.events[:, 0].copy()
+        background_energies = background_detector.events[:, 1].copy()
+
+        if self.real_count_time < background_detector.real_count_time:
+            # get background counts for the duration of the sample count
+
+            end_ind = np.nanargmin(
+                np.abs(self.real_count_time - (background_times - background_times[0]))
+            )
+            b_hist, b_edges = np.histogram(
+                background_energies[: end_ind + 1],
+                bins=raw_bin_edges,
+            )
+        else:
+            b_hist, b_edges = np.histogram(background_energies, bins=raw_bin_edges)
+            b_hist = b_hist * (
+                self.real_count_time / background_detector.real_count_time
+            )
+
+        hist_background_substracted = raw_hist - b_hist
+
+        return hist_background_substracted, raw_bin_edges
+
 
 class Measurement:
     start_time: datetime.datetime
