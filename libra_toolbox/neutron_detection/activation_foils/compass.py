@@ -204,9 +204,8 @@ class Measurement:
     name: str
     detectors: List[Detector]
 
-    def __init__(self, name: str, ch: int) -> None:
+    def __init__(self, name: str) -> None:
         self.name = name
-        self.channel_nb = ch
         self.detectors = []
 
     @classmethod
