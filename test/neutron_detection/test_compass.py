@@ -286,5 +286,12 @@ def test_measurement_object_from_directory():
         Path(__file__).parent / "compass_test_data/complete_measurement/data"
     )
 
-    # RUN
     measurement = compass.Measurement.from_directory(test_directory, name="test")
+
+    assert len(measurement.detectors) == 1
+    assert isinstance(measurement.detectors[0], compass.Detector)
+    assert measurement.detectors[0].channel_nb == 1
+
+    assert measurement.detectors[0].events.shape[1] == 2
+
+    measurement.detectors[0].get_energy_hist(bins="double")
