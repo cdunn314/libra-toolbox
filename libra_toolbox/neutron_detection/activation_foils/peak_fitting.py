@@ -130,46 +130,52 @@ def calibrate_counts_old(counts, decay_lines):
     return counts, coeff
 
 
-def calibrate_counts(measurements: List[Measurement], decay_lines):
+def calibrate_counts(
+    check_source_measurements: List[Measurement],
+    background_measurement: Measurement,
+    channel_nb: int,
+    decay_lines,
+):
 
-    calibration_energies = {}
-    calibration_channels = {}
-    coeff = {}
+    background_detector = [
+        detector
+        for detector in background_measurement.detectors
+        if detector.channel_nb == detector.channel_nb
+    ][0]
 
-    for measurement in measurements:
-        print(measurement.name)
-        # find what digitizer channels were used (ex. Ch0 and Ch1)
+    calibration_energies = []
+    calibration_channels = []
+    coeff = []
+
+    for measurement in check_source_measurements.values():
         for detector in measurement.detectors:
-            calibration_energies[detector.channel_nb] = []
-            calibration_channels[detector.channel_nb] = []
+            if detector.channel_nb != channel_nb:
+                continue
 
             sample = measurement.name[:-2]
-            print(detector.channel_nb, sample)
-            hist, _ = detector.get_energy_hist(bins="double")
+
+            hist, _ = detector.get_energy_hist_background_substract(
+                background_detector, bins="double"
+            )
             peaks = get_peaks(hist, sample)
 
             if len(peaks) != len(decay_lines[sample]["energy"]):
                 raise ValueError(
                     f"SciPy find_peaks() found {len(peaks)} photon peaks, while {len(decay_lines[sample]["energy"])} were expected"
                 )
-            calibration_channels[detector.channel_nb] += list(peaks)
-            calibration_energies[detector.channel_nb] += decay_lines[sample]["energy"]
+            calibration_channels += list(peaks)
+            calibration_energies += decay_lines[sample]["energy"]
 
-            inds = np.argsort(calibration_channels[detector.channel_nb])
-            calibration_channels[detector.channel_nb] = np.array(
-                calibration_channels[detector.channel_nb]
-            )[inds]
-            calibration_energies[detector.channel_nb] = np.array(
-                calibration_energies[detector.channel_nb]
-            )[inds]
+    inds = np.argsort(calibration_channels)
+    calibration_channels = np.array(calibration_channels)[inds]
+    calibration_energies = np.array(calibration_energies)[inds]
 
-            # linear fit for calibration curve
-            coeff[detector.channel_nb] = np.polyfit(
-                calibration_channels[detector.channel_nb],
-                calibration_energies[detector.channel_nb],
-                1,
-            )
-            print(coeff)
+    # linear fit for calibration curve
+    coeff = np.polyfit(
+        calibration_channels,
+        calibration_energies,
+        1,
+    )
 
     return coeff
 
