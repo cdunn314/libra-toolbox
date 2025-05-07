@@ -3,7 +3,7 @@ from numpy.typing import NDArray
 import os
 from pathlib import Path
 import pandas as pd
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Union
 import datetime
 import uproot
 import glob
@@ -171,12 +171,24 @@ class Detector:
     real_count_time: float
 
     def __init__(self, channel_nb) -> None:
+        """
+        Initialize a Detector object.
+        Args:
+            channel_nb: channel number of the detector
+        """
         self.channel_nb = channel_nb
         self.events = np.empty((0, 2))  # Initialize as empty 2D array with 2 columns
         self.live_count_time = None
         self.real_count_time = None
 
-    def get_energy_hist(self, bins) -> Tuple[np.ndarray, np.ndarray]:
+    def get_energy_hist(self, bins: Union[int, str]) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Get the energy histogram of the detector events.
+        Args:
+            bins: number of bins or "double" to use half the max energy as bin size
+        Returns:
+            Tuple of histogram values and bin edges
+        """
 
         energy_values = self.events[:, 1].copy()
         time_values = self.events[:, 0].copy()
@@ -193,6 +205,7 @@ class Detector:
         elif bins == "double":
             real_bins = int(np.nanmax(energy_values) / 2)
         else:
+            # NOTE I don't think this is used
             real_bins = np.arange(0, np.max(energy_values))
 
         return np.histogram(energy_values, bins=real_bins)
@@ -205,11 +218,26 @@ class Measurement:
     detectors: List[Detector]
 
     def __init__(self, name: str) -> None:
+        """
+        Initialize a Measurement object.
+        Args:
+            name: name of the measurement
+        """
+        self.start_time = None
+        self.stop_time = None
         self.name = name
         self.detectors = []
 
     @classmethod
     def from_directory(cls, source_dir: str, name: str) -> "Measurement":
+        """
+        Create a Measurement object from a directory containing Compass data.
+        Args:
+            source_dir: directory containing Compass data
+            name: name of the measurement
+        Returns:
+            Measurement object
+        """
         measurement_object = cls(name=name)
 
         # Get events
