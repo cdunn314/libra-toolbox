@@ -246,8 +246,11 @@ class Measurement:
         detectors = [Detector(channel_nb=nb) for nb in time_values.keys()]
 
         # Get live and real count times
-        root_filename = glob.glob(os.path.join(source_dir, "*.root"))[0]
-        if not os.path.isfile(root_filename):
+        all_root_filenames = glob.glob(os.path.join(source_dir, "*.root"))
+        if len(all_root_filenames) == 1:
+            root_filename = all_root_filenames[0]
+        else:
+            root_filename = None
             print("No root file found, assuming all counts are live")
 
         for detector in detectors:
@@ -255,7 +258,7 @@ class Measurement:
                 (time_values[detector.channel_nb], energy_values[detector.channel_nb])
             )
 
-            if os.path.isfile(root_filename):
+            if root_filename:
                 live_count_time, real_count_time = get_live_time_from_root(
                     root_filename, detector.channel_nb
                 )
