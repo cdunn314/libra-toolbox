@@ -124,7 +124,9 @@ def get_start_stop_time(directory: str) -> Tuple[datetime.datetime, datetime.dat
         with open(info_file, "r") as file:
             lines = file.readlines()
     else:
-        raise FileNotFoundError(f"Could not find run.info file in {directory}")
+        raise FileNotFoundError(
+            f"Could not find run.info file in parent directory {Path(directory).parent}"
+        )
 
     start_time, stop_time = None, None
     for line in lines:
