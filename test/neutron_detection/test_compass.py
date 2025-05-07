@@ -275,3 +275,16 @@ def test_get_live_time_from_root(root_filename, channel, live_time, real_time):
     )
     assert live_time_out == live_time
     assert real_time_out == real_time
+
+
+def test_measurement_object_from_directory():
+    """
+    Test the Measurement object creation from a directory.
+    """
+
+    test_directory = (
+        Path(__file__).parent / "compass_test_data/complete_measurement/data"
+    )
+
+    # RUN
+    measurement = compass.Measurement.from_directory(test_directory, name="test")
