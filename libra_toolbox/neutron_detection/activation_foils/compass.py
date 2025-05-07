@@ -210,23 +210,25 @@ class Detector:
         background_detector: "Detector",
         bins: Union[int, str, NDArray[np.float64]],
     ) -> Tuple[np.ndarray, np.ndarray]:
-
+        ps_to_seconds = 1e-12
         raw_hist, raw_bin_edges = self.get_energy_hist(bins=bins)
         background_times = background_detector.events[:, 0].copy()
         background_energies = background_detector.events[:, 1].copy()
 
         if self.real_count_time < background_detector.real_count_time:
             # get background counts for the duration of the sample count
-
             end_ind = np.nanargmin(
-                np.abs(self.real_count_time - (background_times - background_times[0]))
+                np.abs(
+                    self.real_count_time / ps_to_seconds
+                    - (background_times - background_times[0])
+                )
             )
-            b_hist, b_edges = np.histogram(
+            b_hist, _ = np.histogram(
                 background_energies[: end_ind + 1],
                 bins=raw_bin_edges,
             )
         else:
-            b_hist, b_edges = np.histogram(background_energies, bins=raw_bin_edges)
+            b_hist, _ = np.histogram(background_energies, bins=raw_bin_edges)
             b_hist = b_hist * (
                 self.real_count_time / background_detector.real_count_time
             )
@@ -322,3 +324,50 @@ class Measurement:
         measurement_object.detectors = detectors
 
         return measurement_object
+
+
+def subtract_background(counts, background_directory, savefile=None):
+    # Check if background subtracted counts have already been saved
+    if savefile:
+        if os.path.isfile(savefile):
+            with open(savefile, "rb") as file:
+                counts = pickle.load(file)
+            return counts
+    times, energies = get_events(background_directory)
+    b_count_time = {}
+    for ch in times.keys():
+        if os.path.isfile(os.path.join(background_directory, "run.info")):
+            start_time, stop_time = get_start_stop_time(background_directory)
+            b_count_time[ch] = (stop_time - start_time) * 1e12
+        else:
+            b_count_time[ch] = times[ch][-1] - times[ch][0]
+        print(b_count_time)
+    for sample in counts.keys():
+        for ch in counts[sample].keys():
+            if counts[sample][ch]["real_count_time"] * 1e12 < b_count_time[ch]:
+                # get background counts for the duration of the sample count
+                end_ind = np.nanargmin(
+                    np.abs(
+                        counts[sample][ch]["real_count_time"] * 1e12
+                        - (times[ch] - times[ch][0])
+                    )
+                )
+                b_hist, b_edges = np.histogram(
+                    energies[ch][: end_ind + 1], bins=counts[sample][ch]["bin_edges"]
+                )
+            else:
+                b_hist, b_edges = np.histogram(
+                    energies[ch], bins=counts[sample][ch]["bin_edges"]
+                )
+                print(
+                    "Sample count time: ", counts[sample][ch]["real_count_time"] * 1e12
+                )
+                print("Background count time: ", b_count_time[ch])
+                b_hist = b_hist * (
+                    counts[sample][ch]["real_count_time"] * 1e12 / b_count_time[ch]
+                )
+            counts[sample][ch]["hist"] = counts[sample][ch]["hist"] - b_hist
+    if savefile:
+        with open(savefile, "wb") as file:
+            pickle.dump(counts, file)
+    return counts
