@@ -8,6 +8,8 @@ import datetime
 import uproot
 import glob
 
+import warnings
+
 
 def get_channel(filename):
     """
@@ -252,12 +254,16 @@ class Measurement:
         self.detectors = []
 
     @classmethod
-    def from_directory(cls, source_dir: str, name: str) -> "Measurement":
+    def from_directory(
+        cls, source_dir: str, name: str, info_file_optional: bool = False
+    ) -> "Measurement":
         """
         Create a Measurement object from a directory containing Compass data.
         Args:
             source_dir: directory containing Compass data
             name: name of the measurement
+            info_file_optional: if True, the function will not raise an error
+                if the run.info file is not found
         Returns:
             Measurement object
         """
@@ -267,9 +273,15 @@ class Measurement:
         time_values, energy_values = get_events(source_dir)
 
         # Get start and stop time
-        start_time, stop_time = get_start_stop_time(source_dir)
-        measurement_object.start_time = start_time
-        measurement_object.stop_time = stop_time
+        try:
+            start_time, stop_time = get_start_stop_time(source_dir)
+            measurement_object.start_time = start_time
+            measurement_object.stop_time = stop_time
+        except FileNotFoundError:
+            if info_file_optional:
+                warnings.warn(
+                    "run.info file not found. Assuming start and stop time are not needed."
+                )
 
         # Create detectors
         detectors = [Detector(channel_nb=nb) for nb in time_values.keys()]
