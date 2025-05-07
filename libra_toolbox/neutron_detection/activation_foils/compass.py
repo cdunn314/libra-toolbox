@@ -181,12 +181,17 @@ class Measurement:
 
     @classmethod
     def from_directory(cls, source_dir: str, name: str) -> "Measurement":
+        measurement_object = cls(name=name)
+
         # Get events
         time_values, energy_values = get_events(source_dir)
 
         # Get start and stop time
         start_time, stop_time = get_start_stop_time(source_dir)
+        measurement_object.start_time = start_time
+        measurement_object.stop_time = stop_time
 
+        # Create detectors
         detectors = [Detector(channel_nb=nb) for nb in time_values.keys()]
 
         # Get live and real count times
@@ -217,11 +222,6 @@ class Measurement:
                 detector.live_count_time = live_count_time
                 detector.real_count_time = real_count_time
 
-        measurement_object = cls(
-            name=name,
-        )
-        measurement_object.start_time = start_time
-        measurement_object.stop_time = stop_time
         measurement_object.detectors = detectors
 
         return measurement_object
