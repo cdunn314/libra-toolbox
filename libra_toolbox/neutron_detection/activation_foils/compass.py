@@ -159,7 +159,7 @@ def get_live_time_from_root(root_filename: str, channel: int) -> Tuple[float, fl
 
 
 class Detector:
-    events: NDArray[Tuple[float, float]]  # type: ignore # Array of (time, energy) pairs
+    events: NDArray[Tuple[float, float]]  # type: ignore # Array of (time in ps, energy) pairs
     channel_nb: int
     live_count_time: float
     real_count_time: float
@@ -175,7 +175,9 @@ class Detector:
         self.live_count_time = None
         self.real_count_time = None
 
-    def get_energy_hist(self, bins: Union[int, str]) -> Tuple[np.ndarray, np.ndarray]:
+    def get_energy_hist(
+        self, bins: Union[int, str, NDArray[np.float64]]
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get the energy histogram of the detector events.
         Args:
@@ -186,21 +188,18 @@ class Detector:
 
         energy_values = self.events[:, 1].copy()
         time_values = self.events[:, 0].copy()
+
         # sort data based on timestamp
         inds = np.argsort(time_values)
         time_values = time_values[inds]
         energy_values = energy_values[inds]
-        # print(np.nanmax(energy_values[source]))
 
         energy_values = np.nan_to_num(energy_values, nan=0)
 
-        if isinstance(bins, int):
+        if isinstance(bins, (np.ndarray, int)):
             real_bins = bins
         elif bins == "double":
             real_bins = int(np.nanmax(energy_values) / 2)
-        else:
-            # NOTE I don't think this is used
-            real_bins = np.arange(0, np.max(energy_values))
 
         return np.histogram(energy_values, bins=real_bins)
 

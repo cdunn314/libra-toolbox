@@ -301,3 +301,33 @@ def test_measurement_object_from_directory(no_root):
     assert measurement.detectors[0].events.shape[1] == 2
 
     measurement.detectors[0].get_energy_hist(bins="double")
+
+
+@pytest.mark.parametrize(
+    "bins",
+    [
+        10,
+        20,
+        50,
+        100,
+        "double",
+        np.arange(0, 10, 1),
+        np.linspace(0, 10, num=100),
+    ],
+)
+def test_detector_get_energy_hist(bins):
+    """
+    Test the get_energy_hist method of the Detector class.
+    """
+    my_detector = compass.Detector(channel_nb=1)
+    my_detector.events = np.array(
+        [
+            [1, 2],
+            [3, 4],
+            [5, 6],
+            [7, 8],
+            [9, 10],
+        ]
+    )
+
+    my_detector.get_energy_hist(bins=bins)
