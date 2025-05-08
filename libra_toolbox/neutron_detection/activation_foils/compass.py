@@ -33,7 +33,7 @@ class Detector:
         self.real_count_time = None
 
     def get_energy_hist(
-        self, bins: Union[int, str, NDArray[np.float64]]
+        self, bins: Union[None, NDArray[np.float64]] = None
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get the energy histogram of the detector events.
@@ -53,17 +53,15 @@ class Detector:
 
         energy_values = np.nan_to_num(energy_values, nan=0)
 
-        if isinstance(bins, (np.ndarray, int)):
-            real_bins = bins
-        elif bins == "double":
-            real_bins = int(np.nanmax(energy_values) / 2)
+        if not bins:
+            bins = int(np.nanmax(energy_values))
 
-        return np.histogram(energy_values, bins=real_bins)
+        return np.histogram(energy_values, bins=bins)
 
     def get_energy_hist_background_substract(
         self,
         background_detector: "Detector",
-        bins: Union[int, str, NDArray[np.float64]],
+        bins: Union[NDArray[np.float64], None] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         ps_to_seconds = 1e-12
         raw_hist, raw_bin_edges = self.get_energy_hist(bins=bins)
@@ -207,7 +205,7 @@ class CheckSourceMeasurement(Measurement):
                 self.check_source.activity_date, datetime.time.min
             )
             # add a timezone
-            activity_datetime = activity_datetime.replace(tzinfo=datetime.timezone.utc)
+            activity_datetime = activity_datetime.replace(tzinfo=self.start_time.tzinfo)
         else:
             activity_datetime = self.check_source.activity_date
 
@@ -221,6 +219,7 @@ class CheckSourceMeasurement(Measurement):
         background_measurement: Measurement,
         calibration_coeffs: np.ndarray,
         channel_nb: int,
+        search_width: float = 800,
     ) -> Union[np.ndarray, float]:
         """
         Computes the detection efficiency of a check source given the
@@ -252,7 +251,7 @@ class CheckSourceMeasurement(Measurement):
         ][0]
 
         hist, bin_edges = check_source_detector.get_energy_hist_background_substract(
-            background_detector, bins="double"
+            background_detector, bins=None
         )
 
         calibrated_bin_bedges = np.polyval(calibration_coeffs, bin_edges)
@@ -261,7 +260,7 @@ class CheckSourceMeasurement(Measurement):
             hist,
             calibrated_bin_bedges,
             self.check_source.nuclide.energy,
-            search_width=800,
+            search_width=search_width,
         )
 
         act_meas = np.array(areas) / (
@@ -381,7 +380,7 @@ def get_calibration_data(
             sample = measurement.name[:-2]
 
             hist, bin_edges = detector.get_energy_hist_background_substract(
-                background_detector, bins="double"
+                background_detector, bins=None
             )
             peaks_ind = get_peaks(hist, sample)
             peaks = bin_edges[peaks_ind]
@@ -437,7 +436,13 @@ def gauss(x, b, m, *args):
     return out
 
 
-def fit_peak_gauss(hist, xvals, peak_ergs, search_width=600):
+def fit_peak_gauss(hist, xvals, peak_ergs, search_width=600, threshold_overlap=200):
+
+    if len(peak_ergs) > 1:
+        if np.max(peak_ergs) - np.min(peak_ergs) > threshold_overlap:
+            raise ValueError(
+                f"Peak energies {peak_ergs} are too far away from each to be fitted together."
+            )
 
     search_start = np.argmin(
         np.abs((peak_ergs[0] - search_width / (2 * len(peak_ergs))) - xvals)
@@ -470,7 +475,24 @@ def fit_peak_gauss(hist, xvals, peak_ergs, search_width=600):
     return parameters, covariance
 
 
-def get_multipeak_area(hist, bins, peak_ergs, search_width=600):
+def get_multipeak_area(
+    hist, bins, peak_ergs, search_width=600, threshold_overlap=200
+) -> List[float]:
+
+    if len(peak_ergs) > 1:
+        if np.max(peak_ergs) - np.min(peak_ergs) > threshold_overlap:
+            areas = []
+            for peak in peak_ergs:
+                area = get_multipeak_area(
+                    hist,
+                    bins,
+                    [peak],
+                    search_width=search_width,
+                    threshold_overlap=threshold_overlap,
+                )
+                areas += area
+            return areas
+
     # get midpoints of every bin
     xvals = np.diff(bins) / 2 + bins[:-1]
 
