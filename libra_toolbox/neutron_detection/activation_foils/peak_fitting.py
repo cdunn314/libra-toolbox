@@ -28,7 +28,16 @@ def get_peak_inputs(samples):
     return peak_inputs
 
 
-def get_peaks(hist, source):
+def get_peaks(hist: np.ndarray, source: str) -> np.ndarray:
+    """Returns the peak indices of the histogram
+
+    Args:
+        hist: a histogram
+        source: the type of source (eg. "Na22", "Co60", "Ba133", "Mn54")
+
+    Returns:
+        the peak indices in ``hist``
+    """
     start_index = 100
     prominence = 0.10 * np.max(hist[start_index:])
     height = 0.10 * np.max(hist[start_index:])
@@ -101,10 +110,11 @@ def get_calibration_data(
 
             sample = measurement.name[:-2]
 
-            hist, _ = detector.get_energy_hist_background_substract(
+            hist, bin_edges = detector.get_energy_hist_background_substract(
                 background_detector, bins="double"
             )
-            peaks = get_peaks(hist, sample)
+            peaks_ind = get_peaks(hist, sample)
+            peaks = bin_edges[peaks_ind]
 
             if len(peaks) != len(decay_lines[sample]["energy"]):
                 raise ValueError(
