@@ -10,6 +10,8 @@ import glob
 
 import warnings
 
+from libra_toolbox.neutron_detection.activation_foils import CheckSource
+
 
 def get_channel(filename):
     """
@@ -324,6 +326,10 @@ class Measurement:
         measurement_object.detectors = detectors
 
         return measurement_object
+
+
+class CheckSourceMeasurement(Measurement):
+    check_source: CheckSource
 
 
 def subtract_background(counts, background_directory, savefile=None):

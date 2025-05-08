@@ -4,9 +4,11 @@ from scipy.optimize import curve_fit
 
 from typing import List, Dict, Union
 import datetime
+from libra_toolbox.neutron_detection.activation_foils import CheckSource
 from libra_toolbox.neutron_detection.activation_foils.compass import (
     Detector,
     Measurement,
+    CheckSourceMeasurement,
 )
 
 
@@ -90,10 +92,9 @@ def get_peaks(hist: np.ndarray, source: str) -> np.ndarray:
 
 
 def get_calibration_data(
-    check_source_measurements: List[Measurement],
+    check_source_measurements: List[CheckSourceMeasurement],
     background_measurement: Measurement,
     channel_nb: int,
-    decay_lines,
 ):
     background_detector = [
         detector
@@ -117,12 +118,12 @@ def get_calibration_data(
             peaks_ind = get_peaks(hist, sample)
             peaks = bin_edges[peaks_ind]
 
-            if len(peaks) != len(decay_lines[sample]["energy"]):
+            if len(peaks) != len(measurement.check_source.energy):
                 raise ValueError(
-                    f"SciPy find_peaks() found {len(peaks)} photon peaks, while {len(decay_lines[sample]["energy"])} were expected"
+                    f"SciPy find_peaks() found {len(peaks)} photon peaks, while {len(measurement.check_source.energy)} were expected"
                 )
             calibration_channels += list(peaks)
-            calibration_energies += decay_lines[sample]["energy"]
+            calibration_energies += measurement.check_source.energy
 
     inds = np.argsort(calibration_channels)
     calibration_channels = np.array(calibration_channels)[inds]
@@ -132,17 +133,15 @@ def get_calibration_data(
 
 
 def get_calibration_curve(
-    check_source_measurements: List[Measurement],
+    check_source_measurements: List[CheckSourceMeasurement],
     background_measurement: Measurement,
     channel_nb: int,
-    decay_lines,
 ):
 
     calibration_channels, calibration_energies = get_calibration_data(
         check_source_measurements,
         background_measurement,
         channel_nb,
-        decay_lines,
     )
 
     # linear fit for calibration curve
@@ -286,8 +285,7 @@ def get_peak_areas(hist, bins, peak_ergs, overlap_width=200, search_width=400):
 
 # should be a method of a class called CheckSourceMeasurement
 def get_expected_activity(
-    check_source_data: Dict[str, Union[float, List[float], datetime.date]],
-    check_source_meas: Measurement,
+    check_source_meas: CheckSourceMeasurement,
 ) -> float:
     """
     Calculates the expected activity of a check source given the
@@ -299,29 +297,30 @@ def get_expected_activity(
     and :math:`t` is the time since the measurement date.
 
     Args:
-        check_source_data: _description_
         check_source_meas: _description_
 
     Returns:
         the expected activity of the check source in Bq
     """
     # expected activity
-    decay_constant = np.log(2) / check_source_data["half_life"]
+    decay_constant = np.log(2) / check_source_meas.check_source.half_life
 
     # Convert date to datetime if needed
-    if isinstance(check_source_data["activity_date"], datetime.date) and not isinstance(
-        check_source_data["activity_date"], datetime.datetime
+    if isinstance(
+        check_source_meas.check_source.activity_date, datetime.date
+    ) and not isinstance(
+        check_source_meas.check_source.activity_date, datetime.datetime
     ):
         activity_datetime = datetime.datetime.combine(
-            check_source_data["activity_date"], datetime.time.min
+            check_source_meas.check_source.activity_date, datetime.time.min
         )
         # add a timezone
         activity_datetime = activity_datetime.replace(tzinfo=datetime.timezone.utc)
     else:
-        activity_datetime = check_source_data["activity_date"]
+        activity_datetime = check_source_meas.check_source.activity_date
 
     time = (check_source_meas.start_time - activity_datetime).total_seconds()
-    act_expec = check_source_data["activity"] * np.exp(-decay_constant * time)
+    act_expec = check_source_meas.check_source.activity * np.exp(-decay_constant * time)
     return act_expec
 
 
@@ -329,8 +328,7 @@ def get_expected_activity(
 def compute_detection_efficiency(
     check_source_detector: Detector,
     background_detector: Detector,
-    check_source_meas: Measurement,
-    check_source_data: Dict[str, Union[float, List[float], datetime.date]],
+    check_source_meas: CheckSourceMeasurement,
     calibration_coeffs: np.ndarray,
 ) -> Union[np.ndarray, float]:
     """
@@ -364,17 +362,22 @@ def compute_detection_efficiency(
     calibrated_bin_bedges = np.polyval(calibration_coeffs, bin_edges)
 
     areas = get_multipeak_area(
-        hist, calibrated_bin_bedges, check_source_data["energy"], search_width=800
+        hist,
+        calibrated_bin_bedges,
+        check_source_meas.check_source.energy,
+        search_width=800,
     )
 
     act_meas = np.array(areas) / (
-        np.array(check_source_data["intensity"]) * check_source_detector.live_count_time
+        np.array(check_source_meas.check_source.intensity)
+        * check_source_detector.live_count_time
     )
     act_meas_err = np.sqrt(np.array(areas)) / (
-        np.array(check_source_data["intensity"]) * check_source_detector.live_count_time
+        np.array(check_source_meas.check_source.intensity)
+        * check_source_detector.live_count_time
     )
 
-    act_expec = get_expected_activity(check_source_data, check_source_meas)
+    act_expec = get_expected_activity(check_source_meas)
 
     detection_efficiency = act_meas / act_expec
 
