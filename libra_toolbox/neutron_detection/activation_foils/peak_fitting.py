@@ -155,20 +155,6 @@ def get_calibration_curve(
     return coeff
 
 
-def gauss1(x, H, m, A, x0, sigma):
-    return H + m * x + A * np.exp(-((x - x0) ** 2) / (2 * sigma**2))
-
-
-def gauss2(x, H, m, A1, x1, sigma1, A2, x2, sigma2):
-    out = (
-        H
-        + m * x
-        + A1 * np.exp(-((x - x1) ** 2) / (2 * sigma1**2))
-        + A2 * np.exp(-((x - x2) ** 2) / (2 * sigma2**2))
-    )
-    return out
-
-
 def gauss(x, b, m, *args):
     """Creates a multipeak gaussian with a linear addition of the form:
     m * x + b + Sum_i (A_i * exp(-(x - x_i)**2) / (2 * sigma_i**2)"""
