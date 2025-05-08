@@ -224,9 +224,7 @@ def get_singlepeak_area(hist, bins, peak_erg, search_width=300):
     return area
 
 
-def get_multipeak_area(hist, bins, peak_ergs, search_width=600):
-    # get midpoints of every bin
-    xvals = np.diff(bins) / 2 + bins[:-1]
+def fit_peak_gauss(hist, xvals, peak_ergs, search_width=600):
 
     search_start = np.argmin(
         np.abs((peak_ergs[0] - search_width / (2 * len(peak_ergs))) - xvals)
@@ -235,11 +233,11 @@ def get_multipeak_area(hist, bins, peak_ergs, search_width=600):
         np.abs((peak_ergs[-1] + search_width / (2 * len(peak_ergs))) - xvals)
     )
 
-    guess_slope = (hist[search_end] - hist[search_start]) / (
+    slope_guess = (hist[search_end] - hist[search_start]) / (
         xvals[search_end] - xvals[search_start]
     )
 
-    guess_parameters = [0, guess_slope]
+    guess_parameters = [0, slope_guess]
 
     for i in range(len(peak_ergs)):
         peak_ind = np.argmin(np.abs((peak_ergs[i]) - xvals))
@@ -249,23 +247,31 @@ def get_multipeak_area(hist, bins, peak_ergs, search_width=600):
             search_width / (3 * len(peak_ergs)),
         ]
 
-    # print(guess_parameters)
-
     parameters, covariance = curve_fit(
         gauss,
         xvals[search_start:search_end],
         hist[search_start:search_end],
         p0=guess_parameters,
     )
-    # print(parameters)
+
+    return parameters, covariance
+
+
+def get_multipeak_area(hist, bins, peak_ergs, search_width=600):
+    # get midpoints of every bin
+    xvals = np.diff(bins) / 2 + bins[:-1]
+
+    parameters, covariance = fit_peak_gauss(
+        hist, xvals, peak_ergs, search_width=search_width
+    )
 
     areas = []
     peak_starts = []
     peak_ends = []
     all_peak_params = []
-    peak_amplitudes = []
+    # peak_amplitudes = []
     for i in range(len(peak_ergs)):
-        peak_amplitudes += [parameters[2 + 3 * i]]
+        # peak_amplitudes += [parameters[2 + 3 * i]]
         mean = parameters[2 + 3 * i + 1]
         sigma = np.abs(parameters[2 + 3 * i + 2])
         peak_start = np.argmin(np.abs((mean - 3 * sigma) - xvals))
@@ -330,92 +336,3 @@ def get_peak_areas(hist, bins, peak_ergs, overlap_width=200, search_width=400):
         )
         # print(areas)
     return areas
-
-
-def energy_efficiency(
-    counts,
-    decay_lines,
-    nuclides=None,
-    overlap_width=200,
-    search_width=400,
-    degree=2,
-    count_sum_peak=False,
-):
-    if nuclides is None:
-        nuclides = decay_lines.keys()
-
-    effs = {}
-    eff_errs = {}
-    energies = {}
-    for nuc in nuclides:
-        sum_peak = False
-        if len(decay_lines[nuc]["energy"]) > 1 and count_sum_peak:
-            peak_energies = decay_lines[nuc]["energy"] + [
-                np.sum(decay_lines[nuc]["energy"])
-            ]
-            sum_peak = True
-        else:
-            peak_energies = decay_lines[nuc]["energy"]
-        for ch in counts[nuc].keys():
-            # initialize efficiency list
-            if ch not in effs.keys():
-                effs[ch] = []
-                eff_errs[ch] = []
-                energies[ch] = []
-
-            # print(nuc, ' Ch ', ch )
-            areas = get_peak_areas(
-                counts[nuc][ch]["hist"],
-                counts[nuc][ch]["calibrated_bin_edges"],
-                peak_energies,
-                overlap_width=overlap_width,
-                search_width=search_width,
-            )
-            if sum_peak:
-                areas = np.array(areas)[:-1] + areas[-1] / len(areas[:-1])
-            # print('Peak areas: ', areas)
-            # measured activity
-            # I think this should be divided by live count time, but maybe it should
-            # be divided by real count time?? Should go over this again
-            act_meas = np.array(areas) / (
-                np.array(decay_lines[nuc]["intensity"])
-                * counts[nuc][ch]["live_count_time"]
-            )
-            # print('Activity measured: ', act_meas)
-            act_meas_err = np.sqrt(np.array(areas)) / (
-                np.array(decay_lines[nuc]["intensity"])
-                * counts[nuc][ch]["live_count_time"]
-            )
-            # expected activity
-            l = np.log(2) / decay_lines[nuc]["half_life"]
-            # print('decay constant: ', l)
-            time = (
-                counts[nuc][ch]["start_time"] - decay_lines[nuc]["activity_date"]
-            ).total_seconds()
-            # print('count time: ', time)
-            act_expec = decay_lines[nuc]["activity"] * np.exp(-l * time)
-            # print('Activity expected: ', act_expec)
-            # print('efficiency: ', act_meas/act_expec)
-
-            effs[ch] += list(act_meas / act_expec)
-            eff_errs[ch] += list(act_meas_err / act_expec)
-            energies[ch] += decay_lines[nuc]["energy"]
-
-    # Sort the data
-    # print('effs: ', effs)
-    # print('energies: ', energies)
-    coeff = {}
-    bounds = {}
-    for ch in effs.keys():
-        ind = np.argsort(energies[ch])
-        energies[ch] = np.array(energies[ch])[ind]
-        effs[ch] = np.array(effs[ch])[ind]
-        eff_errs[ch] = np.array(eff_errs[ch])[ind]
-
-        # Create polynomial fit
-        coeff[ch] = np.polyfit(energies[ch], effs[ch], degree)
-
-        # Get bounds of fit for interpolation
-        bounds[ch] = [np.min(energies[ch]), np.max(energies[ch])]
-
-    return effs, eff_errs, coeff, bounds
