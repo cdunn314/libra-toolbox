@@ -10,6 +10,7 @@ check_source_ba133 = CheckSource(
     intensity=[0.329, 0.0716, 0.1834, 0.6205, 0.0894],
     activity_date=datetime.date(2014, 3, 19),
     activity=1 * uCi_to_Bq,
+    half_life=10.551 * 365.25 * 24 * 3600,
 )
 
 check_source_co60 = CheckSource(
@@ -18,6 +19,7 @@ check_source_co60 = CheckSource(
     intensity=[0.9985, 0.999826],
     activity_date=datetime.date(2014, 3, 19),
     activity=0.872 * uCi_to_Bq,
+    half_life=1925.28 * 24 * 3600,
 )
 check_source_na22 = CheckSource(
     nuclide="Na22",
@@ -25,6 +27,7 @@ check_source_na22 = CheckSource(
     intensity=[1.80, 0.9994],
     activity_date=datetime.date(2014, 3, 19),
     activity=5 * uCi_to_Bq,
+    half_life=2.6018 * 365.25 * 24 * 3600,
 )
 check_source_cs137 = CheckSource(
     nuclide="Cs137",
@@ -32,6 +35,7 @@ check_source_cs137 = CheckSource(
     intensity=[0.851],
     activity_date=datetime.date(2014, 3, 19),
     activity=4.66 * uCi_to_Bq,
+    half_life=30.08 * 365.25 * 24 * 3600,
 )
 check_source_mn54 = CheckSource(
     nuclide="Mn54",
@@ -39,4 +43,5 @@ check_source_mn54 = CheckSource(
     intensity=[0.99976],
     activity_date=datetime.date(2016, 5, 2),
     activity=6.27 * uCi_to_Bq,
+    half_life=312.20 * 24 * 3600,
 )
