@@ -25,6 +25,7 @@ class CheckSource:
 
 class ActivationFoil:
     nuclide: str
+    mass: float
 
 
 from . import explicit, settings, calculations
