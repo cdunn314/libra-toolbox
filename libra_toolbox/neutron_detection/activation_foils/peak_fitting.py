@@ -2,7 +2,8 @@ import numpy as np
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 
-from typing import List, Dict
+from typing import List, Dict, Union
+import datetime
 from libra_toolbox.neutron_detection.activation_foils.compass import (
     Detector,
     Measurement,
@@ -183,47 +184,6 @@ def gauss(x, b, m, *args):
     return out
 
 
-def get_singlepeak_area(hist, bins, peak_erg, search_width=300):
-
-    # get midpoints of every bin
-    xvals = np.diff(bins) / 2 + bins[:-1]
-
-    peak_ind = np.argmin(np.abs((peak_erg) - xvals))
-    search_start = np.argmin(np.abs((peak_erg - search_width / 2) - xvals))
-    search_end = np.argmin(np.abs((peak_erg + search_width / 2) - xvals))
-
-    slope_guess = (hist[search_end] - hist[search_start]) / (
-        xvals[search_end] - xvals[search_start]
-    )
-
-    guess_parameters = [0, slope_guess, hist[peak_ind], peak_erg, search_width / 6]
-    # print(guess_parameters)
-
-    parameters, covariance = curve_fit(
-        gauss1,
-        xvals[search_start:search_end],
-        hist[search_start:search_end],
-        p0=guess_parameters,
-    )
-    # print(parameters)
-
-    mean = parameters[3]
-    sigma = parameters[4]
-
-    peak_start = np.argmin(np.abs((mean - 3 * sigma) - xvals))
-    peak_end = np.argmin(np.abs((mean + 3 * sigma) - xvals))
-
-    gross_area = np.trapezoid(hist[peak_start:peak_end], x=xvals[peak_start:peak_end])
-    # trap_cutoff_area = (hist[peak_start] + hist[peak_end])/2 * (bins[peak_end] - bins[peak_start])
-    trap_cutoff_area = np.trapezoid(
-        parameters[0] + parameters[1] * xvals[peak_start:peak_end],
-        x=xvals[peak_start:peak_end],
-    )
-    area = gross_area - trap_cutoff_area
-
-    return area
-
-
 def fit_peak_gauss(hist, xvals, peak_ergs, search_width=600):
 
     search_start = np.argmin(
@@ -336,3 +296,100 @@ def get_peak_areas(hist, bins, peak_ergs, overlap_width=200, search_width=400):
         )
         # print(areas)
     return areas
+
+
+# should be a method of a class called CheckSourceMeasurement
+def get_expected_activity(
+    check_source_data: Dict[str, Union[float, List[float], datetime.date]],
+    check_source_meas: Measurement,
+) -> float:
+    """
+    Calculates the expected activity of a check source given the
+    half-life and the date of the measurement.
+    The expected activity is calculated using the formula:
+    .. math:: A(t) = A_0 e^{-\\lambda t}
+
+    where :math:`A_0` is the initial activity, :math:`\\lambda` is the decay constant
+    and :math:`t` is the time since the measurement date.
+
+    Args:
+        check_source_data: _description_
+        check_source_meas: _description_
+
+    Returns:
+        the expected activity of the check source in Bq
+    """
+    # expected activity
+    decay_constant = np.log(2) / check_source_data["half_life"]
+
+    # Convert date to datetime if needed
+    if isinstance(check_source_data["activity_date"], datetime.date) and not isinstance(
+        check_source_data["activity_date"], datetime.datetime
+    ):
+        activity_datetime = datetime.datetime.combine(
+            check_source_data["activity_date"], datetime.time.min
+        )
+        # add a timezone
+        activity_datetime = activity_datetime.replace(tzinfo=datetime.timezone.utc)
+    else:
+        activity_datetime = check_source_data["activity_date"]
+
+    time = (check_source_meas.start_time - activity_datetime).total_seconds()
+    act_expec = check_source_data["activity"] * np.exp(-decay_constant * time)
+    return act_expec
+
+
+# should be a method of a class called CheckSourceMeasurement
+def compute_detection_efficiency(
+    check_source_detector: Detector,
+    background_detector: Detector,
+    check_source_meas: Measurement,
+    check_source_data: Dict[str, Union[float, List[float], datetime.date]],
+    calibration_coeffs: np.ndarray,
+) -> Union[np.ndarray, float]:
+    """
+    Computes the detection efficiency of a check source given the
+    check source data and the calibration coefficients.
+    The detection efficiency is calculated using the formula:
+    .. math:: \\eta = \\frac{A_{meas}}{A_{expec}}
+
+    where :math:`A_{meas}` is the measured activity and :math:`A_{expec}` is the expected activity.
+    The measured activity is calculated using the formula:
+    .. math:: A_{meas} = \\frac{A_{peak}}{I \\cdot t_{live}}
+
+    where :math:`A_{peak}` is the area of the peak, :math:`I` is the intensity of the check source
+    and :math:`t_{live}` is the live count time of the detector.
+
+    Args:
+        check_source_detector: _description_
+        background_detector: _description_
+        check_source_meas: _description_
+        check_source_data: _description_
+        calibration_coeffs: _description_
+
+    Returns:
+        the detection efficiency
+    """
+
+    hist, bin_edges = check_source_detector.get_energy_hist_background_substract(
+        background_detector, bins="double"
+    )
+
+    calibrated_bin_bedges = np.polyval(calibration_coeffs, bin_edges)
+
+    areas = get_multipeak_area(
+        hist, calibrated_bin_bedges, check_source_data["energy"], search_width=800
+    )
+
+    act_meas = np.array(areas) / (
+        np.array(check_source_data["intensity"]) * check_source_detector.live_count_time
+    )
+    act_meas_err = np.sqrt(np.array(areas)) / (
+        np.array(check_source_data["intensity"]) * check_source_detector.live_count_time
+    )
+
+    act_expec = get_expected_activity(check_source_data, check_source_meas)
+
+    detection_efficiency = act_meas / act_expec
+
+    return detection_efficiency
