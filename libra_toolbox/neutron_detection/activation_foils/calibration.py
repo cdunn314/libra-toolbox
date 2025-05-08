@@ -1,76 +1,70 @@
-import datetime
+from dataclasses import dataclass
+from typing import List
+from datetime import datetime
 
 
-class CheckSource:
-    nuclide: str
-    energy: list
-    intensity: list
-    activity_date: datetime.date
-    activity: float
+@dataclass
+class Nuclide:
+    """
+    Class to hold the information of a nuclide.
+
+    Attributes
+    ----------
+    name :
+        The name of the nuclide.
+    energy :
+        The energy of the gamma rays emitted by the nuclide.
+    intensity :
+        The intensity of the gamma rays emitted by the nuclide. (must sum to 1)
+    half_life :
+        The half-life of the nuclide in seconds.
+    """
+
+    name: str
+    energy: List[float]
+    intensity: List[float]
     half_life: float
 
-    def __init__(
-        self,
-        nuclide: str,
-        energy: list,
-        intensity: list,
-        activity_date: datetime.date,
-        activity: float,
-        half_life: float,
-    ):
-        self.nuclide = nuclide
-        self.energy = energy
-        self.intensity = intensity
-        self.activity_date = activity_date
-        self.activity = activity
-        self.half_life = half_life
+
+ba133 = Nuclide(
+    name="Ba133",
+    energy=[80.9979, 276.3989, 302.8508, 356.0129, 383.8485],
+    intensity=[0.329, 0.0716, 0.1834, 0.6205, 0.0894],
+    half_life=10.551 * 365.25 * 24 * 3600,
+)
+co60 = Nuclide(
+    name="Co60",
+    energy=[1173.228, 1332.492],
+    intensity=[0.9985, 0.999826],
+    half_life=1925.28 * 24 * 3600,
+)
+na22 = Nuclide(
+    name="Na22",
+    energy=[511, 1274.537],
+    intensity=[1.80, 0.9994],
+    half_life=2.6018 * 365.25 * 24 * 3600,
+)
+cs137 = Nuclide(
+    name="Cs137",
+    energy=[661.657],
+    intensity=[0.851],
+    half_life=30.08 * 365.25 * 24 * 3600,
+)
+mn54 = Nuclide(
+    name="Mn54",
+    energy=[834.848],
+    intensity=[0.99976],
+    half_life=312.20 * 24 * 3600,
+)
+
+
+@dataclass
+class CheckSource:
+    nuclide: Nuclide
+    activity_date: datetime.date
+    activity: float
 
 
 class ActivationFoil:
-    nuclide: str
+    nuclide: Nuclide
     mass: float
-
-
-uCi_to_Bq = 3.7e4
-
-check_source_ba133 = CheckSource(
-    nuclide="Ba133",
-    energy=[80.9979, 276.3989, 302.8508, 356.0129, 383.8485],
-    intensity=[0.329, 0.0716, 0.1834, 0.6205, 0.0894],
-    activity_date=datetime.date(2014, 3, 19),
-    activity=1 * uCi_to_Bq,
-    half_life=10.551 * 365.25 * 24 * 3600,
-)
-
-check_source_co60 = CheckSource(
-    nuclide="Co60",
-    energy=[1173.228, 1332.492],
-    intensity=[0.9985, 0.999826],
-    activity_date=datetime.date(2014, 3, 19),
-    activity=0.872 * uCi_to_Bq,
-    half_life=1925.28 * 24 * 3600,
-)
-check_source_na22 = CheckSource(
-    nuclide="Na22",
-    energy=[511, 1274.537],
-    intensity=[1.80, 0.9994],
-    activity_date=datetime.date(2014, 3, 19),
-    activity=5 * uCi_to_Bq,
-    half_life=2.6018 * 365.25 * 24 * 3600,
-)
-check_source_cs137 = CheckSource(
-    nuclide="Cs137",
-    energy=[661.657],
-    intensity=[0.851],
-    activity_date=datetime.date(2014, 3, 19),
-    activity=4.66 * uCi_to_Bq,
-    half_life=30.08 * 365.25 * 24 * 3600,
-)
-check_source_mn54 = CheckSource(
-    nuclide="Mn54",
-    energy=[834.848],
-    intensity=[0.99976],
-    activity_date=datetime.date(2016, 5, 2),
-    activity=6.27 * uCi_to_Bq,
-    half_life=312.20 * 24 * 3600,
-)
