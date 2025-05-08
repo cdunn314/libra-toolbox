@@ -300,7 +300,7 @@ def test_measurement_object_from_directory(no_root):
 
     assert measurement.detectors[0].events.shape[1] == 2
 
-    measurement.detectors[0].get_energy_hist(bins="double")
+    measurement.detectors[0].get_energy_hist(bins=None)
 
 
 @pytest.mark.parametrize(
@@ -310,7 +310,7 @@ def test_measurement_object_from_directory(no_root):
         20,
         50,
         100,
-        "double",
+        None,
         np.arange(0, 10, 1),
         np.linspace(0, 10, num=100),
     ],
