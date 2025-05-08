@@ -13,9 +13,9 @@ class Nuclide:
     name :
         The name of the nuclide.
     energy :
-        The energy of the gamma rays emitted by the nuclide.
+        The energy of the gamma rays emitted by the nuclide (in keV).
     intensity :
-        The intensity of the gamma rays emitted by the nuclide. (must sum to 1)
+        The intensity of the gamma rays emitted by the nuclide.
     half_life :
         The half-life of the nuclide in seconds.
     """
