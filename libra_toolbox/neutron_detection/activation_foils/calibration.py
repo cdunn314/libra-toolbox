@@ -6,6 +6,17 @@ from typing import List
 class Nuclide:
     """
     Class to hold the information of a nuclide.
+
+    Attributes
+    ----------
+    name :
+        The name of the nuclide.
+    energy :
+        The energy of the gamma rays emitted by the nuclide.
+    intensity :
+        The intensity of the gamma rays emitted by the nuclide. (must sum to 1)
+    half_life :
+        The half-life of the nuclide in seconds.
     """
 
     name: str
