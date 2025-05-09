@@ -2,6 +2,10 @@ import pytest
 import numpy as np
 import os
 from libra_toolbox.neutron_detection.activation_foils import compass
+from libra_toolbox.neutron_detection.activation_foils.calibration import (
+    Nuclide,
+    CheckSource,
+)
 from pathlib import Path
 import datetime
 
@@ -336,8 +340,6 @@ def test_detector_get_energy_hist(bins):
 @pytest.mark.parametrize(
     "counting_time_background",
     [
-        0.1,
-        1,
         10,
         100,
         1000,
@@ -347,6 +349,10 @@ def test_detector_get_energy_hist(bins):
 def test_background_sub(counting_time_background):
     """
     Test the background subtraction method of the Detector class.
+    Builds a test case with a background measurement and a measured foil measurement,
+    then checks that the background is correctly subtracted from the measured spectrum.
+
+    Also checks that the result is independent of the counting time of the background measurement.
     """
     # BUILD
 
@@ -356,10 +362,9 @@ def test_background_sub(counting_time_background):
     def measured_spectrum(energies):
         return np.cos(energies / 10) + 10
 
-    counting_time_measured = 3600
-    counting_time_background = counting_time_measured * 5
+    counting_time_measured = 200
 
-    background_rate = 100000 / (3600)
+    background_rate = 300000 / (3600)
     measurement_rate = 3 * background_rate
 
     nb_events_background = int(background_rate * counting_time_background)
@@ -422,7 +427,7 @@ def test_background_sub(counting_time_background):
     )
 
     # RUN
-    hist_bc_sub, _ = detector_meas.get_energy_hist_background_substract(
+    computed_hist, _ = detector_meas.get_energy_hist_background_substract(
         background_detector=background_detector
     )
 
@@ -432,4 +437,140 @@ def test_background_sub(counting_time_background):
     expected_hist = (
         hist_raw - hist_bg / counting_time_background * counting_time_measured
     )
-    assert np.allclose(hist_bc_sub, expected_hist, rtol=1e-1)
+    assert np.allclose(computed_hist, expected_hist, rtol=1e-1)
+
+
+@pytest.mark.parametrize(
+    "activity_date",
+    [
+        datetime.datetime(2024, 11, 7),
+        datetime.date(2024, 11, 7),
+    ],
+)
+@pytest.mark.parametrize("n_half_lives", [0, 1, 2, 3, 4, 5])
+def test_check_source_expected_activity(n_half_lives, activity_date):
+    """
+    Test the expected activity of a check source.
+    """
+    # BUILD
+    half_life = 10 * 24 * 3600  # seconds  (10 days)
+    activity = 500  # Bq
+
+    test_nuclide = Nuclide(
+        name="TestNuclide",
+        energy=[100, 200],
+        intensity=[0.5, 0.5],
+        half_life=half_life,
+    )
+
+    check_source = CheckSource(
+        nuclide=test_nuclide,
+        activity_date=activity_date,
+        activity=activity,
+    )
+
+    measurement = compass.CheckSourceMeasurement(name="test measurement")
+    measurement.check_source = check_source
+    measurement.start_time = activity_date + datetime.timedelta(
+        seconds=n_half_lives * half_life
+    )
+    measurement.stop_time = measurement.start_time + datetime.timedelta(hours=1)
+
+    # convert start_time and stop_time to datetime
+    if isinstance(measurement.start_time, datetime.date):
+        measurement.start_time = datetime.datetime.combine(
+            measurement.start_time, datetime.datetime.min.time()
+        )
+
+    # RUN
+    computed_activity = measurement.get_expected_activity()
+
+    # TEST
+
+    expected_activity = activity / (2**n_half_lives)
+    assert np.isclose(computed_activity, expected_activity, rtol=1e-2)
+
+
+@pytest.mark.parametrize("expected_efficiency", [1e-2, 0.5, 1])
+def test_check_source_detection_efficiency(expected_efficiency):
+    """
+    Test the detection efficiency of a check source measurement.
+    Generates a test case with a known detection efficiency and checks that the
+    computed efficiency is close to the expected one.
+
+    Using a Mn54 source with an energy of 834.848 keV and an intensity of 1.0.
+    We generate some events with a normal distribution centered on the energy of the source.
+    The number of events is given by the expected efficiency, the activity of the source,
+    the measurement time, and the number of half-lives passed since the activity date.
+    """
+    # BUILD
+
+    ps_to_seconds = 1e-12
+
+    n_half_lives = 0
+
+    activity_date = datetime.datetime(2024, 11, 7)
+    half_life = 10 * 24 * 3600  # seconds  (10 days)
+    activity = 500e1  # Bq
+
+    test_nuclide = Nuclide(
+        name="TestNuclide Mn54",
+        energy=[834.848],
+        intensity=[1.0],
+        half_life=half_life,
+    )
+
+    check_source = CheckSource(
+        nuclide=test_nuclide,
+        activity_date=activity_date,
+        activity=activity,
+    )
+
+    measurement = compass.CheckSourceMeasurement(name="test measurement")
+    measurement.check_source = check_source
+    measurement.start_time = activity_date + datetime.timedelta(
+        seconds=n_half_lives * half_life
+    )
+    measurement.stop_time = measurement.start_time + datetime.timedelta(seconds=100)
+    measurement_time = (measurement.stop_time - measurement.start_time).total_seconds()
+
+    # generate the spectrum which is a normal centered on energy
+    nb_events_measured = (
+        expected_efficiency * activity / (2**n_half_lives) * measurement_time
+    )
+    energy_events = np.random.normal(
+        loc=test_nuclide.energy[0],
+        scale=20,
+        size=int(nb_events_measured),
+    )
+    # make sure the min and max are in the range of the detector
+    energy_events[0] = 1
+    energy_events[-1] = 3000
+    time_events = np.random.uniform(
+        0,
+        measurement_time,
+        size=int(nb_events_measured),
+    )
+    time_events *= 1 / ps_to_seconds
+    time_events.sort()
+
+    detector_meas = compass.Detector(channel_nb=1)
+    detector_meas.events = np.column_stack((time_events, energy_events))
+    detector_meas.real_count_time = measurement_time
+    detector_meas.live_count_time = detector_meas.real_count_time
+    measurement.detectors = [detector_meas]
+
+    background_measurement = compass.Measurement("background")
+    bg_detector = compass.Detector(channel_nb=1)
+    bg_detector.real_count_time = 0.5
+    background_measurement.detectors = [bg_detector]
+
+    # RUN
+    computed_efficiency = measurement.compute_detection_efficiency(
+        background_measurement,
+        calibration_coeffs=[1.0, 0.0],  # assume perfect calibration
+        channel_nb=1,
+    )
+
+    # TEST
+    assert np.isclose(computed_efficiency, expected_efficiency, rtol=1e-2)
