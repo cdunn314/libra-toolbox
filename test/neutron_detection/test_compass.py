@@ -275,3 +275,59 @@ def test_get_live_time_from_root(root_filename, channel, live_time, real_time):
     )
     assert live_time_out == live_time
     assert real_time_out == real_time
+
+
+@pytest.mark.parametrize("no_root", [True, False])
+def test_measurement_object_from_directory(no_root):
+    """
+    Test the Measurement object creation from a directory.
+    """
+    if no_root:
+        test_directory = (
+            Path(__file__).parent
+            / "compass_test_data/complete_measurement_no_root/data"
+        )
+    else:
+        test_directory = (
+            Path(__file__).parent / "compass_test_data/complete_measurement/data"
+        )
+
+    measurement = compass.Measurement.from_directory(test_directory, name="test")
+
+    assert len(measurement.detectors) == 1
+    assert isinstance(measurement.detectors[0], compass.Detector)
+    assert measurement.detectors[0].channel_nb == 1
+
+    assert measurement.detectors[0].events.shape[1] == 2
+
+    measurement.detectors[0].get_energy_hist(bins=None)
+
+
+@pytest.mark.parametrize(
+    "bins",
+    [
+        10,
+        20,
+        50,
+        100,
+        None,
+        np.arange(0, 10, 1),
+        np.linspace(0, 10, num=100),
+    ],
+)
+def test_detector_get_energy_hist(bins):
+    """
+    Test the get_energy_hist method of the Detector class.
+    """
+    my_detector = compass.Detector(channel_nb=1)
+    my_detector.events = np.array(
+        [
+            [1, 2],
+            [3, 4],
+            [5, 6],
+            [7, 8],
+            [9, 10],
+        ]
+    )
+
+    my_detector.get_energy_hist(bins=bins)
