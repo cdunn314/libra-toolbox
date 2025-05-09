@@ -279,25 +279,6 @@ class CheckSourceMeasurement(Measurement):
         return detection_efficiency
 
 
-def get_peak_inputs(samples):
-    default_inputs = {
-        "Na22": {"prom_factor": 0.075, "width": [10, 150], "start_index": 100},
-        "Co60": {"prom_factor": 0.2, "width": [10, 150], "start_index": 400},
-        "Ba133": {"prom_factor": 0.1, "width": [10, 200], "start_index": 100},
-        "Mn54": {"prom_factor": 0.2, "width": [10, 100], "start_index": 100},
-    }
-
-    defaults = {"prom_factor": 0.075, "width": [10, 150], "start_index": 100}
-
-    peak_inputs = {}
-    for sample in samples:
-        if sample in default_inputs.keys():
-            peak_inputs[sample] = default_inputs[sample]
-        else:
-            peak_inputs[sample] = defaults
-    return peak_inputs
-
-
 def get_peaks(hist: np.ndarray, source: str) -> np.ndarray:
     """Returns the peak indices of the histogram
 
