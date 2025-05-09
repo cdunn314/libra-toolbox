@@ -353,7 +353,7 @@ def get_calibration_data(
     calibration_energies = []
     calibration_channels = []
 
-    for measurement in check_source_measurements.values():
+    for measurement in check_source_measurements:
         for detector in measurement.detectors:
             if detector.channel_nb != channel_nb:
                 continue
