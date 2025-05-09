@@ -574,3 +574,172 @@ def test_check_source_detection_efficiency(expected_efficiency):
 
     # TEST
     assert np.isclose(computed_efficiency, expected_efficiency, rtol=1e-2)
+
+
+@pytest.mark.parametrize(
+    "a, b",
+    [
+        (1.5, 200),
+        (1, 0),
+        (2, 600),
+    ],
+)
+def test_get_calibration_data(a, b):
+    """
+    Test the get_calibration_data function from the compass module.
+    Checks that the calibration data is correctly computed from the measurements.
+
+    The test generates a set of measurements with known energies and intensities,
+    and checks that the computed calibration data matches the expected values.
+    The energies counts (channels) are generated using a linear function with parameters a and b.
+    """
+    # BUILD
+    channel_nb = 1
+    nb_events_measured = 60000
+    measurements = []
+    real_energies = np.array([800, 1300, 1800])
+    energy_channels = a * real_energies + b
+    for real_energy, energy_channel in zip(
+        real_energies,
+        energy_channels,
+    ):
+        test_nuclide = Nuclide(
+            name="TestNuclide",
+            energy=[real_energy],
+            intensity=[1.0],
+            half_life=10000,
+        )
+        check_source = CheckSource(
+            nuclide=test_nuclide,
+            activity_date=datetime.datetime(2024, 11, 7),
+            activity=5000,
+        )
+
+        # create CheckSourceMeasurement
+        measurement = compass.CheckSourceMeasurement(name="test measurement")
+        measurement.check_source = check_source
+        measurement.start_time = datetime.datetime(2024, 11, 7)
+        detector = compass.Detector(channel_nb=channel_nb)
+        energy_events = np.random.normal(
+            loc=energy_channel, scale=30, size=int(nb_events_measured)
+        )
+
+        # make sure the min and max are in the range of the detector
+        energy_events[0] = 1
+        energy_events[-1] = 3000
+
+        time_events = np.random.uniform(0, 100, size=int(nb_events_measured))
+        detector.events = np.column_stack((time_events, energy_events))
+        detector.real_count_time = 100
+        measurement.detectors = [detector]
+
+        measurements.append(measurement)
+
+    # create background measurement
+    background_measurement = compass.Measurement("background")
+    bg_detector = compass.Detector(channel_nb=channel_nb)
+    bg_detector.real_count_time = 100
+    background_measurement.detectors = [bg_detector]
+
+    # RUN
+    calibration_channels, calibration_energies = compass.get_calibration_data(
+        measurements, background_measurement, channel_nb=channel_nb
+    )
+
+    # TEST
+    assert np.allclose(calibration_channels, energy_channels, rtol=1e-2)
+    assert np.allclose(calibration_energies, real_energies, rtol=1e-2)
+
+
+def test_get_multipeak_area_single_peak():
+    """
+    Test the get_multipeak_area function from the compass module.
+    Checks that the area under the peaks is correctly computed.
+    """
+    # BUILD
+    energy = 2000
+    nb_events_measured = 60000
+    energy_events = np.random.normal(loc=energy, scale=30, size=int(nb_events_measured))
+    # make sure the min and max are in the range of the detector
+    energy_events[0] = 1
+    energy_events[-1] = 3000
+
+    hist, bin_edges = np.histogram(energy_events, bins=np.arange(0, 3000))
+
+    # RUN
+    areas = compass.get_multipeak_area(hist, bin_edges, peak_ergs=[energy])
+
+    # TEST
+    expected_area = np.sum(hist)
+    assert np.isclose(areas[0], expected_area, rtol=1e-2)
+
+
+def test_get_multipeak_area_two_separated_peaks():
+    """
+    Test the get_multipeak_area function from the compass module.
+    Checks that the area under the peaks is correctly computed.
+    """
+    # BUILD
+    energy1 = 1000
+    energy2 = 2000
+    energy_events = np.empty((0,))
+    nb_events_peak1 = 60000
+    nb_events_peak2 = 2 * nb_events_peak1
+    sigma_peak = 30
+    for energy, nb_events in zip(
+        [energy1, energy2], [nb_events_peak1, nb_events_peak2]
+    ):
+        new_energy_events = np.random.normal(
+            loc=energy, scale=sigma_peak, size=int(nb_events)
+        )
+        # make sure the min and max are in the range of the detector
+        new_energy_events[0] = 1
+        new_energy_events[-1] = 3000
+        energy_events = np.concatenate((energy_events, new_energy_events))
+
+    hist, bin_edges = np.histogram(energy_events, bins=np.arange(0, 3000))
+
+    # RUN
+    areas = compass.get_multipeak_area(hist, bin_edges, peak_ergs=[energy1, energy2])
+
+    # TEST
+
+    expected_area_peak_1 = nb_events_peak1
+    expected_area_peak_2 = nb_events_peak2
+    for i, expected_area in enumerate([expected_area_peak_1, expected_area_peak_2]):
+        assert np.isclose(areas[i], expected_area, rtol=1e-2)
+
+
+def test_get_multipeak_area_two_close_peaks():
+    """
+    Test the get_multipeak_area function from the compass module.
+    Checks that the area under the peaks is correctly computed.
+    """
+    # BUILD
+    energy1 = 1000
+    energy2 = 1100
+    energy_events = np.empty((0,))
+    nb_events_peak1 = 100000
+    nb_events_peak2 = 0.5 * nb_events_peak1
+    sigma_peak = 30
+    for energy, nb_events in zip(
+        [energy1, energy2], [nb_events_peak1, nb_events_peak2]
+    ):
+        new_energy_events = np.random.normal(
+            loc=energy, scale=sigma_peak, size=int(nb_events)
+        )
+        # make sure the min and max are in the range of the detector
+        new_energy_events[0] = 1
+        new_energy_events[-1] = 3000
+        energy_events = np.concatenate((energy_events, new_energy_events))
+
+    hist, bin_edges = np.histogram(energy_events, bins=np.arange(0, 3000))
+
+    # RUN
+    areas = compass.get_multipeak_area(hist, bin_edges, peak_ergs=[energy1, energy2])
+
+    # TEST
+    expected_area_peak_1 = nb_events_peak1
+    expected_area_peak_2 = nb_events_peak2
+    for i, expected_area in enumerate([expected_area_peak_1, expected_area_peak_2]):
+        assert np.isclose(areas[i], expected_area, rtol=1e-2)

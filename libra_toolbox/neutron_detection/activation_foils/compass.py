@@ -380,6 +380,7 @@ def get_calibration_data(
     return calibration_channels, calibration_energies
 
 
+# NOTE is this function really needed?
 def get_calibration_curve(
     check_source_measurements: List[CheckSourceMeasurement],
     background_measurement: Measurement,
