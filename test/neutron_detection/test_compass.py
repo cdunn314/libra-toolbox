@@ -331,3 +331,105 @@ def test_detector_get_energy_hist(bins):
     )
 
     my_detector.get_energy_hist(bins=bins)
+
+
+@pytest.mark.parametrize(
+    "counting_time_background",
+    [
+        0.1,
+        1,
+        10,
+        100,
+        1000,
+        3000,
+    ],
+)
+def test_background_sub(counting_time_background):
+    """
+    Test the background subtraction method of the Detector class.
+    """
+    # BUILD
+
+    def background_spectrum(energies):
+        return np.ones_like(energies)
+
+    def measured_spectrum(energies):
+        return np.cos(energies / 10) + 10
+
+    counting_time_measured = 3600
+    counting_time_background = counting_time_measured * 5
+
+    background_rate = 100000 / (3600)
+    measurement_rate = 3 * background_rate
+
+    nb_events_background = int(background_rate * counting_time_background)
+    nb_events_measured = int(measurement_rate * counting_time_measured)
+    nb_events_measured_bg_contrib = int(background_rate * counting_time_measured)
+
+    # Define energy grid for sampling
+    energy_grid = np.arange(100)
+
+    # Calculate probability distributions using the spectrum functions
+    bg_probabilities = background_spectrum(energy_grid)
+    bg_probabilities = bg_probabilities / np.sum(bg_probabilities)  # Normalize
+    measured_probabilities = measured_spectrum(energy_grid)
+    measured_probabilities = measured_probabilities / np.sum(
+        measured_probabilities
+    )  # Normalize
+
+    # Sample from these distributions
+    energy_events_bg = np.random.choice(
+        energy_grid, size=nb_events_background, p=bg_probabilities
+    )
+    energy_events_measured = np.random.choice(
+        energy_grid, size=nb_events_measured, p=measured_probabilities
+    )
+    energy_events_measured_bg_contrib = np.random.choice(
+        energy_grid, size=nb_events_measured_bg_contrib, p=bg_probabilities
+    )
+
+    energy_events_measured = np.concatenate(
+        (energy_events_measured, energy_events_measured_bg_contrib)
+    )
+
+    # Create the measurement objects
+    ps_to_seconds = 1e-12
+
+    measurement = compass.Measurement("test")
+    detector_meas = compass.Detector(channel_nb=1)
+    detector_meas.real_count_time = counting_time_measured
+    measurement.detectors = [detector_meas]
+    time_events_measured = np.random.uniform(
+        0, counting_time_measured, nb_events_measured + nb_events_measured_bg_contrib
+    )
+    time_events_measured *= 1 / ps_to_seconds
+    time_events_measured.sort()
+    detector_meas.events = np.column_stack(
+        (time_events_measured, energy_events_measured)
+    )
+
+    background_measurment = compass.Measurement("background")
+    background_detector = compass.Detector(channel_nb=1)
+    background_detector.real_count_time = counting_time_background
+    background_measurment.detectors = [background_detector]
+    background_time_events = np.random.uniform(
+        0, counting_time_background, nb_events_background
+    )
+    background_time_events *= 1 / ps_to_seconds
+    background_time_events.sort()
+    background_detector.events = np.column_stack(
+        (background_time_events, energy_events_bg)
+    )
+
+    # RUN
+    hist_bc_sub, _ = detector_meas.get_energy_hist_background_substract(
+        background_detector=background_detector
+    )
+
+    # TEST
+    hist_bg, _ = background_detector.get_energy_hist()
+    hist_raw, _ = detector_meas.get_energy_hist()
+    expected_hist = (
+        hist_raw - hist_bg / counting_time_background * counting_time_measured
+    )
+    assert np.allclose(hist_bc_sub, expected_hist, rtol=1e-1)
