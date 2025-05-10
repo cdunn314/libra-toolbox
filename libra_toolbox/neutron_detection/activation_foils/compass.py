@@ -516,45 +516,6 @@ def get_multipeak_area(
     return areas
 
 
-def group_close_values(data, threshold=200):
-    # Sort the data to group values sequentially
-    data.sort()
-
-    # Initialize groups and a temporary group
-    groups = []
-    temp_group = [data[0]]
-
-    for i in range(1, len(data)):
-        # Check if the current value is within the threshold of the last value in the temp group
-        if abs(data[i] - temp_group[-1]) < threshold:
-            temp_group.append(data[i])
-        else:
-            # Commit the temp group to groups and start a new group
-            groups.append(tuple(temp_group))
-            temp_group = [data[i]]
-
-    # Add the last group
-    groups.append(tuple(temp_group))
-
-    return groups
-
-
-def get_peak_areas(hist, bins, peak_ergs, overlap_width=200, search_width=400):
-
-    areas = []
-    # organize peak energies into tuples, in which peak energies close enough
-    # to have overlapping peaks will be paired together
-    erg_groups = group_close_values(peak_ergs, threshold=overlap_width)
-    # print(erg_groups)
-
-    for erg_group in erg_groups:
-        areas += get_multipeak_area(
-            hist, bins, erg_group, search_width=len(erg_group) * search_width
-        )
-        # print(areas)
-    return areas
-
-
 def get_channel(filename):
     """
     Extract the channel number from a given filename string.
