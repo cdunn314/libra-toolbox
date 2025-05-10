@@ -300,10 +300,11 @@ class CheckSourceMeasurement(Measurement):
         width = [10, 150]
         distance = 30
         if self.check_source.nuclide == na22:
-            # find 511 keV peak first
-            prominence = 0.01 * np.max(hist[start_index:])
-            height = 0.9 * np.max(hist[start_index:])
-            width = [10, 200]
+            start_index = 100
+            height = 0.1 * np.max(hist[start_index:])
+            prominence = 0.1 * np.max(hist[start_index:])
+            width = [10, 150]
+            distance = 30
         elif self.check_source.nuclide == co60:
             start_index = 400
             height = 0.60 * np.max(hist[start_index:])
@@ -320,22 +321,6 @@ class CheckSourceMeasurement(Measurement):
             distance=distance,
         )
         peaks = np.array(peaks) + start_index
-        if self.check_source.nuclide == na22:
-            # Find 1275 keV peak
-            peak_511 = peaks[0]
-            start_index = peak_511 + 100
-            prominence = 0.5 * np.max(hist[start_index:])
-            height = 0.10 * np.max(hist[start_index:])
-
-            high_peaks, peak_data = find_peaks(
-                hist[start_index:],
-                prominence=prominence,
-                height=height,
-                width=width,
-                distance=distance,
-            )
-            high_peaks = np.array(high_peaks) + start_index
-            peaks = [peak_511, high_peaks[0]]
 
         return peaks
 
