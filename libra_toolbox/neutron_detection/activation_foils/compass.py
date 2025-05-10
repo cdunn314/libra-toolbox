@@ -284,16 +284,19 @@ class CheckSourceMeasurement(Measurement):
 
         return detection_efficiency
 
-    def get_peaks(self, hist: np.ndarray) -> np.ndarray:
+    def get_peaks(self, hist: np.ndarray, **kwargs) -> np.ndarray:
         """Returns the peak indices of the histogram
 
         Args:
             hist: a histogram
+            kwargs: optional parameters for the peak finding algorithm
+                see scipy.signal.find_peaks for more information
 
         Returns:
             the peak indices in ``hist``
         """
 
+        # peak finding parameters
         start_index = 100
         prominence = 0.10 * np.max(hist[start_index:])
         height = 0.10 * np.max(hist[start_index:])
@@ -313,6 +316,16 @@ class CheckSourceMeasurement(Measurement):
             width = [10, 200]
         elif self.check_source.nuclide == mn54:
             height = 0.6 * np.max(hist[start_index:])
+
+        # update the parameters if kwargs are provided
+        if kwargs:
+            prominence = kwargs.get("prominence", prominence)
+            height = kwargs.get("height", height)
+            width = kwargs.get("width", width)
+            distance = kwargs.get("distance", distance)
+
+        # run the peak finding algorithm
+        # NOTE: the start_index is used to ignore the low energy region
         peaks, peak_data = find_peaks(
             hist[start_index:],
             prominence=prominence,
