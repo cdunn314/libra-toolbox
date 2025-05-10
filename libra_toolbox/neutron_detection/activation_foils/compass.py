@@ -9,7 +9,13 @@ import uproot
 import glob
 
 import warnings
-from libra_toolbox.neutron_detection.activation_foils.calibration import CheckSource
+from libra_toolbox.neutron_detection.activation_foils.calibration import (
+    CheckSource,
+    na22,
+    co60,
+    ba133,
+    mn54,
+)
 
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
@@ -278,65 +284,60 @@ class CheckSourceMeasurement(Measurement):
 
         return detection_efficiency
 
+    def get_peaks(self, hist: np.ndarray) -> np.ndarray:
+        """Returns the peak indices of the histogram
 
-def get_peaks(hist: np.ndarray, source: str) -> np.ndarray:
-    """Returns the peak indices of the histogram
+        Args:
+            hist: a histogram
 
-    Args:
-        hist: a histogram
-        source: the type of source (eg. "Na22", "Co60", "Ba133", "Mn54")
+        Returns:
+            the peak indices in ``hist``
+        """
 
-    Returns:
-        the peak indices in ``hist``
-    """
-    start_index = 100
-    prominence = 0.10 * np.max(hist[start_index:])
-    height = 0.10 * np.max(hist[start_index:])
-    width = [10, 150]
-    indices = None
-    distance = 30
-    if "na22" in source.lower():
-        # find 511 keV peak first
-        prominence = 0.01 * np.max(hist[start_index:])
-        height = 0.9 * np.max(hist[start_index:])
-        width = [10, 200]
-    elif "co60" in source.lower():
-        start_index = 400
-        height = 0.60 * np.max(hist[start_index:])
-        prominence = None
-    elif "ba133" in source.lower():
-        width = [10, 200]
-    elif "mn54" in source.lower():
-        height = 0.6 * np.max(hist[start_index:])
-    peaks, peak_data = find_peaks(
-        hist[start_index:],
-        prominence=prominence,
-        height=height,
-        width=width,
-        distance=distance,
-    )
-    peaks = np.array(peaks) + start_index
-    if "na22" in source.lower():
-        # Find 1275 keV peak
-        peak_511 = peaks[0]
-        start_index = peak_511 + 100
-        prominence = 0.5 * np.max(hist[start_index:])
+        start_index = 100
+        prominence = 0.10 * np.max(hist[start_index:])
         height = 0.10 * np.max(hist[start_index:])
-
-        high_peaks, peak_data = find_peaks(
+        width = [10, 150]
+        distance = 30
+        if self.check_source.nuclide == na22:
+            # find 511 keV peak first
+            prominence = 0.01 * np.max(hist[start_index:])
+            height = 0.9 * np.max(hist[start_index:])
+            width = [10, 200]
+        elif self.check_source.nuclide == co60:
+            start_index = 400
+            height = 0.60 * np.max(hist[start_index:])
+            prominence = None
+        elif self.check_source.nuclide == ba133:
+            width = [10, 200]
+        elif self.check_source.nuclide == mn54:
+            height = 0.6 * np.max(hist[start_index:])
+        peaks, peak_data = find_peaks(
             hist[start_index:],
             prominence=prominence,
             height=height,
             width=width,
             distance=distance,
         )
-        high_peaks = np.array(high_peaks) + start_index
-        peaks = [peak_511, high_peaks[0]]
+        peaks = np.array(peaks) + start_index
+        if self.check_source.nuclide == na22:
+            # Find 1275 keV peak
+            peak_511 = peaks[0]
+            start_index = peak_511 + 100
+            prominence = 0.5 * np.max(hist[start_index:])
+            height = 0.10 * np.max(hist[start_index:])
 
-    if indices:
-        peaks = peaks[[indices]][0]
+            high_peaks, peak_data = find_peaks(
+                hist[start_index:],
+                prominence=prominence,
+                height=height,
+                width=width,
+                distance=distance,
+            )
+            high_peaks = np.array(high_peaks) + start_index
+            peaks = [peak_511, high_peaks[0]]
 
-    return peaks
+        return peaks
 
 
 def get_calibration_data(
@@ -363,7 +364,7 @@ def get_calibration_data(
             hist, bin_edges = detector.get_energy_hist_background_substract(
                 background_detector, bins=None
             )
-            peaks_ind = get_peaks(hist, sample)
+            peaks_ind = measurement.get_peaks(hist)
             peaks = bin_edges[peaks_ind]
 
             if len(peaks) != len(measurement.check_source.nuclide.energy):
