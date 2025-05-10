@@ -719,7 +719,7 @@ def test_get_multipeak_area_two_close_peaks():
     energy1 = 1000
     energy2 = 1100
     energy_events = np.empty((0,))
-    nb_events_peak1 = 100000
+    nb_events_peak1 = 1300000
     nb_events_peak2 = 0.6 * nb_events_peak1
     sigma_peak = 30
     for energy, nb_events in zip(
