@@ -264,15 +264,15 @@ class CheckSourceMeasurement(Measurement):
 
         calibrated_bin_bedges = np.polyval(calibration_coeffs, bin_edges)
 
-        areas = get_multipeak_area(
+        nb_counts_measured = get_multipeak_area(
             hist,
             calibrated_bin_bedges,
             self.check_source.nuclide.energy,
             search_width=search_width,
         )
 
-        nb_counts_measured = np.array(areas)
-        nb_counts_measured_err = np.sqrt(np.array(areas))
+        nb_counts_measured = np.array(nb_counts_measured)
+        nb_counts_measured_err = np.sqrt(nb_counts_measured)
 
         act_expec = self.check_source.get_expected_activity(self.start_time)
         gamma_rays_expected = act_expec * (
