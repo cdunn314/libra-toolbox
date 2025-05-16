@@ -271,17 +271,16 @@ class CheckSourceMeasurement(Measurement):
             search_width=search_width,
         )
 
-        nb_counts_measured = np.array(areas) / (
-            np.array(self.check_source.nuclide.intensity)
-        )
-        nb_counts_measured_err = np.sqrt(np.array(areas)) / (
-            np.array(self.check_source.nuclide.intensity)
-        )
+        nb_counts_measured = np.array(areas)
+        nb_counts_measured_err = np.sqrt(np.array(areas))
 
         act_expec = self.check_source.get_expected_activity(self.start_time)
+        gamma_rays_expected = act_expec * (
+            np.array(self.check_source.nuclide.intensity)
+        )
         decay_constant = np.log(2) / self.check_source.nuclide.half_life
 
-        expected_nb_counts = act_expec / decay_constant
+        expected_nb_counts = gamma_rays_expected / decay_constant
         live_count_time_correction_factor = (
             check_source_detector.live_count_time
             / check_source_detector.real_count_time
