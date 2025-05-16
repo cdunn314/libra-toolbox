@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List
-from datetime import datetime
+import datetime
+import numpy as np
 
 
 @dataclass
@@ -63,6 +64,27 @@ class CheckSource:
     nuclide: Nuclide
     activity_date: datetime.date
     activity: float
+
+    def get_expected_activity(self, date: datetime.date) -> float:
+
+        decay_constant = np.log(2) / self.nuclide.half_life
+
+        # Convert date to datetime if needed
+        if isinstance(self.activity_date, datetime.date) and not isinstance(
+            self.activity_date, datetime.datetime
+        ):
+
+            activity_datetime = datetime.datetime.combine(
+                self.activity_date, datetime.datetime.min.time()
+            )
+            # add a timezone
+            activity_datetime = activity_datetime.replace(tzinfo=date.tzinfo)
+        else:
+            activity_datetime = self.activity_date
+
+        time = (date - activity_datetime).total_seconds()
+        act_expec = self.activity * np.exp(-decay_constant * time)
+        return act_expec
 
 
 class ActivationFoil:

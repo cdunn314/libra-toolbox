@@ -469,21 +469,13 @@ def test_check_source_expected_activity(n_half_lives, activity_date):
         activity=activity,
     )
 
-    measurement = compass.CheckSourceMeasurement(name="test measurement")
-    measurement.check_source = check_source
-    measurement.start_time = activity_date + datetime.timedelta(
-        seconds=n_half_lives * half_life
-    )
-    measurement.stop_time = measurement.start_time + datetime.timedelta(hours=1)
-
+    start_time = activity_date + datetime.timedelta(seconds=n_half_lives * half_life)
     # convert start_time and stop_time to datetime
-    if isinstance(measurement.start_time, datetime.date):
-        measurement.start_time = datetime.datetime.combine(
-            measurement.start_time, datetime.datetime.min.time()
-        )
+    if isinstance(start_time, datetime.date):
+        start_time = datetime.datetime.combine(start_time, datetime.datetime.min.time())
 
     # RUN
-    computed_activity = measurement.get_expected_activity()
+    computed_activity = check_source.get_expected_activity(start_time)
 
     # TEST
 

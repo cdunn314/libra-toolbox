@@ -221,38 +221,6 @@ class Measurement:
 class CheckSourceMeasurement(Measurement):
     check_source: CheckSource
 
-    def get_expected_activity(self) -> float:
-        """
-        Calculates the expected activity of a check source at the
-        beginning of the measurement given the
-        half-life and the date of the measurement.
-        The expected activity is calculated using the formula:
-        .. math:: A(t) = A_0 e^{-\\lambda t}
-
-        where :math:`A_0` is the initial activity, :math:`\\lambda` is the decay constant
-        and :math:`t` is the time since the measurement date.
-
-        Returns:
-            the expected activity of the check source in Bq
-        """
-        decay_constant = np.log(2) / self.check_source.nuclide.half_life
-
-        # Convert date to datetime if needed
-        if isinstance(
-            self.check_source.activity_date, datetime.date
-        ) and not isinstance(self.check_source.activity_date, datetime.datetime):
-            activity_datetime = datetime.datetime.combine(
-                self.check_source.activity_date, datetime.time.min
-            )
-            # add a timezone
-            activity_datetime = activity_datetime.replace(tzinfo=self.start_time.tzinfo)
-        else:
-            activity_datetime = self.check_source.activity_date
-
-        time = (self.start_time - activity_datetime).total_seconds()
-        act_expec = self.check_source.activity * np.exp(-decay_constant * time)
-        return act_expec
-
     def compute_detection_efficiency(
         self,
         background_measurement: Measurement,
@@ -310,7 +278,7 @@ class CheckSourceMeasurement(Measurement):
             np.array(self.check_source.nuclide.intensity)
         )
 
-        act_expec = self.get_expected_activity()
+        act_expec = self.check_source.get_expected_activity(self.start_time)
         decay_constant = np.log(2) / self.check_source.nuclide.half_life
 
         expected_nb_counts = act_expec / decay_constant
