@@ -52,12 +52,15 @@ class Detector:
         self.real_count_time = None
 
     def get_energy_hist(
-        self, bins: Union[None, NDArray[np.float64]] = None
+        self, bins: Union[None, NDArray[np.float64], int, str] = None
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Get the energy histogram of the detector events.
         Args:
-            bins: number of bins or "double" to use half the max energy as bin size
+            bins: bins for the histogram. If None, bins are automatically generated
+                (one bin per energy channel). If int, it specifies the number of bins.
+                If str, it specifies the binning method (e.g., 'auto', 'fd', etc.) see
+                ``numpy.histogram_bin_edges`` for more details.
         Returns:
             Tuple of histogram values and bin edges
         """
@@ -73,7 +76,9 @@ class Detector:
         energy_values = np.nan_to_num(energy_values, nan=0)
 
         if bins is None:
-            bins = int(np.nanmax(energy_values)) + 1
+            bins = np.arange(
+                int(np.nanmin(energy_values)), int(np.nanmax(energy_values)) + 1
+            )
 
         return np.histogram(energy_values, bins=bins)
 
