@@ -223,7 +223,8 @@ class CheckSourceMeasurement(Measurement):
 
     def get_expected_activity(self) -> float:
         """
-        Calculates the expected activity of a check source given the
+        Calculates the expected activity of a check source at the
+        beginning of the measurement given the
         half-life and the date of the measurement.
         The expected activity is calculated using the formula:
         .. math:: A(t) = A_0 e^{-\\lambda t}
@@ -252,7 +253,6 @@ class CheckSourceMeasurement(Measurement):
         act_expec = self.check_source.activity * np.exp(-decay_constant * time)
         return act_expec
 
-    # should be a method of a class called CheckSourceMeasurement
     def compute_detection_efficiency(
         self,
         background_measurement: Measurement,
@@ -264,18 +264,19 @@ class CheckSourceMeasurement(Measurement):
         Computes the detection efficiency of a check source given the
         check source data and the calibration coefficients.
         The detection efficiency is calculated using the formula:
-        .. math:: \\eta = \\frac{A_{meas}}{A_{expec}}
+        .. math:: \\eta = \\frac{N_{meas}}{N_{expec}}
 
-        where :math:`A_{meas}` is the measured activity and :math:`A_{expec}` is the expected activity.
-        The measured activity is calculated using the formula:
-        .. math:: A_{meas} = \\frac{A_{peak}}{I \\cdot t_{live}}
+        where :math:`N_{meas}` is the total number of counts measured under the energy peak
+        and :math:`N_{expec}` is the total number of emitted gamma-rays from the check source.
 
-        where :math:`A_{peak}` is the area of the peak, :math:`I` is the intensity of the check source
-        and :math:`t_{live}` is the live count time of the detector.
+        The expected number of counts :math:`N_{expec}` is calculated according to Equation 3
+        in https://doi.org/10.2172/1524045.
 
         Args:
-            background_measurement: _description_
-            calibration_coeffs: _description_
+            background_measurement: background measurement
+            calibration_coeffs: the calibration polynomial coefficients for the detector
+            channel_nb: the channel number of the detector
+            search_width: the search width for the peak fitting
 
         Returns:
             the detection efficiency
@@ -302,18 +303,29 @@ class CheckSourceMeasurement(Measurement):
             search_width=search_width,
         )
 
-        act_meas = np.array(areas) / (
+        nb_counts_measured = np.array(areas) / (
             np.array(self.check_source.nuclide.intensity)
-            * check_source_detector.live_count_time
         )
-        act_meas_err = np.sqrt(np.array(areas)) / (
+        nb_counts_measured_err = np.sqrt(np.array(areas)) / (
             np.array(self.check_source.nuclide.intensity)
-            * check_source_detector.live_count_time
         )
 
         act_expec = self.get_expected_activity()
+        decay_constant = np.log(2) / self.check_source.nuclide.half_life
 
-        detection_efficiency = act_meas / act_expec
+        expected_nb_counts = act_expec / decay_constant
+        live_count_time_correction_factor = (
+            check_source_detector.live_count_time
+            / check_source_detector.real_count_time
+        )
+        decay_counting_correction_factor = 1 - np.exp(
+            -decay_constant * check_source_detector.real_count_time
+        )
+        expected_nb_counts *= (
+            live_count_time_correction_factor * decay_counting_correction_factor
+        )
+
+        detection_efficiency = nb_counts_measured / expected_nb_counts
 
         return detection_efficiency
 
