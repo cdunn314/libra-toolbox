@@ -11,6 +11,7 @@ import glob
 import warnings
 from libra_toolbox.neutron_detection.activation_foils.calibration import (
     CheckSource,
+    ActivationFoil,
     na22,
     co60,
     ba133,
@@ -327,6 +328,102 @@ class CheckSourceMeasurement(Measurement):
         elif self.check_source.nuclide == ba133:
             width = [10, 200]
         elif self.check_source.nuclide == mn54:
+            height = 0.6 * np.max(hist[start_index:])
+
+        # update the parameters if kwargs are provided
+        if kwargs:
+            prominence = kwargs.get("prominence", prominence)
+            height = kwargs.get("height", height)
+            width = kwargs.get("width", width)
+            distance = kwargs.get("distance", distance)
+
+        # run the peak finding algorithm
+        # NOTE: the start_index is used to ignore the low energy region
+        peaks, peak_data = find_peaks(
+            hist[start_index:],
+            prominence=prominence,
+            height=height,
+            width=width,
+            distance=distance,
+        )
+        peaks = np.array(peaks) + start_index
+
+        return peaks
+
+
+class SampleMeasurement(Measurement):
+    foil: ActivationFoil
+
+    def get_gamma_emmited(
+        self,
+        background_measurement: Measurement,
+        efficiency_coeffs,
+        calibration_coeffs,
+        channel_nb: int,
+        search_width: float = 800,
+    ):
+        # find right background detector
+
+        background_detector = [
+            d for d in background_measurement.detectors if d.channel_nb == channel_nb
+        ][0]
+        check_source_detector = [
+            d for d in self.detectors if d.channel_nb == channel_nb
+        ][0]
+
+        hist, bin_edges = check_source_detector.get_energy_hist_background_substract(
+            background_detector, bins=None
+        )
+
+        calibrated_bin_bedges = np.polyval(calibration_coeffs, bin_edges)
+
+        nb_counts_measured = get_multipeak_area(
+            hist,
+            calibrated_bin_bedges,
+            self.foil.nuclide.energy,
+            search_width=search_width,
+        )
+
+        nb_counts_measured = np.array(nb_counts_measured)
+        nb_counts_measured_err = np.sqrt(nb_counts_measured)
+
+        detection_efficiency = np.polyval(efficiency_coeffs, self.foil.nuclide.energy)
+
+        gamma_emmitted = nb_counts_measured / detection_efficiency
+        gamma_emmitted_err = nb_counts_measured_err / detection_efficiency
+        return gamma_emmitted, gamma_emmitted_err
+
+    def get_peaks(self, hist: np.ndarray, **kwargs) -> np.ndarray:
+        """Returns the peak indices of the histogram
+
+        Args:
+            hist: a histogram
+            kwargs: optional parameters for the peak finding algorithm
+                see scipy.signal.find_peaks for more information
+
+        Returns:
+            the peak indices in ``hist``
+        """
+
+        # peak finding parameters
+        start_index = 100
+        prominence = 0.10 * np.max(hist[start_index:])
+        height = 0.10 * np.max(hist[start_index:])
+        width = [10, 150]
+        distance = 30
+        if self.foil.nuclide == na22:
+            start_index = 100
+            height = 0.1 * np.max(hist[start_index:])
+            prominence = 0.1 * np.max(hist[start_index:])
+            width = [10, 150]
+            distance = 30
+        elif self.foil.nuclide == co60:
+            start_index = 400
+            height = 0.60 * np.max(hist[start_index:])
+            prominence = None
+        elif self.foil.nuclide == ba133:
+            width = [10, 200]
+        elif self.foil.nuclide == mn54:
             height = 0.6 * np.max(hist[start_index:])
 
         # update the parameters if kwargs are provided

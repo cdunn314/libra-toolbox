@@ -58,6 +58,13 @@ mn54 = Nuclide(
     half_life=312.20 * 24 * 3600,
 )
 
+nb92m = Nuclide(
+    name="Nb92m",
+    energy=[934.44],
+    intensity=[0.9915],
+    half_life=10.25 * 24 * 3600,
+)
+
 
 @dataclass
 class CheckSource:
@@ -87,6 +94,8 @@ class CheckSource:
         return act_expec
 
 
+@dataclass
 class ActivationFoil:
     nuclide: Nuclide
     mass: float
+    name: str
