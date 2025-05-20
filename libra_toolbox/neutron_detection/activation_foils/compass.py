@@ -222,6 +222,19 @@ class Measurement:
 
         return measurement_object
 
+    def get_detector(self, channel_nb: int) -> Detector:
+        """
+        Get the detector object for a given channel number.
+        Args:
+            channel_nb: channel number of the detector
+        Returns:
+            Detector object for the specified channel
+        """
+        for detector in self.detectors:
+            if detector.channel_nb == channel_nb:
+                return detector
+        raise ValueError(f"Detector with channel number {channel_nb} not found.")
+
 
 class CheckSourceMeasurement(Measurement):
     check_source: CheckSource
