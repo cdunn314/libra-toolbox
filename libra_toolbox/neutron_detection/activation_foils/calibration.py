@@ -123,6 +123,7 @@ class ActivationFoil:
     mass: float
     name: str
     abundance: float = 1.0
+    thickness: float = None
 
     @property
     def nb_atoms(self):

@@ -82,7 +82,7 @@ class Detector:
 
         if bins is None:
             bins = np.arange(
-                int(np.nanmin(energy_values)), int(np.nanmax(energy_values)) + 1
+                int(np.nanmin(energy_values)), int(np.nanmax(energy_values))
             )
 
         return np.histogram(energy_values, bins=bins)
@@ -381,12 +381,8 @@ class SampleMeasurement(Measurement):
     ):
         # find right background detector
 
-        background_detector = [
-            d for d in background_measurement.detectors if d.channel_nb == channel_nb
-        ][0]
-        check_source_detector = [
-            d for d in self.detectors if d.channel_nb == channel_nb
-        ][0]
+        background_detector = background_measurement.get_detector(channel_nb)
+        check_source_detector = self.get_detector(channel_nb)
 
         hist, bin_edges = check_source_detector.get_energy_hist_background_substract(
             background_detector, bins=None
@@ -467,59 +463,83 @@ class SampleMeasurement(Measurement):
 
     def get_neutron_flux(
         self,
-        number_of_decays_measured: float,
+        channel_nb: int,
+        photon_counts: float,
         irradiations: list,
         distance: float,
         time_generator_off: datetime.datetime,
-    ):
+        total_efficiency=1,
+        branching_ratio=1,
+    ) -> float:
         """calculates the neutron flux during the irradiation
+        Based on Equation 1 from:
+        Lee, Dongwon, et al. "Determination of the Deuterium-Tritium (D-T) Generator
+        Neutron Flux using Multi-foil Neutron Activation Analysis Method." ,
+        May. 2019. https://doi.org/10.2172/1524045
 
         Args:
-            number_of_decays_measured: number of decays measured
             irradiations: list of dictionaries with keys "t_on" and "t_off" for irradiations
-            distance: distance from the target plane to the foil in cm
 
         Returns:
-            pint.Quantity: neutron flux
+            neutron flux
         """
 
+        time_between_generator_off_and_start_of_counting = (
+            self.start_time - time_generator_off
+        ).total_seconds()
+
+        # Spectroscopic Factor to account for the branching ratio and the
+        # total detection efficiency
+
+        f_spec = total_efficiency * branching_ratio
+
+        number_of_decays_measured = photon_counts / f_spec
         flux = (
             number_of_decays_measured
             / self.foil.nb_atoms
             / self.foil.reaction.cross_section
         )
 
-        flux *= (
-            get_chain(
-                irradiations, decay_constant=self.foil.reaction.product.decay_constant
-            )
-            ** -1
-        )
-        time_between_generator_off_and_start_of_counting = (
-            time_generator_off - self.start_time
-        ).total_seconds()
+        detector = self.get_detector(channel_nb)
 
-        flux *= (
-            -1
-            / self.foil.reaction.product.decay_constant
+        f_time = (
+            get_chain(irradiations, self.foil.reaction.product.decay_constant)
+            * np.exp(
+                -self.foil.reaction.product.decay_constant
+                * time_between_generator_off_and_start_of_counting
+            )
             * (
-                np.exp(
-                    -self.foil.reaction.product.decay_constant
-                    * (
-                        time_between_generator_off_and_start_of_counting
-                        + (self.stop_time - self.start_time).total_seconds()
-                    )
-                )
+                1
                 - np.exp(
                     -self.foil.reaction.product.decay_constant
-                    * time_between_generator_off_and_start_of_counting
+                    * detector.real_count_time
                 )
             )
-        ) ** -1
+            * (detector.live_count_time / detector.real_count_time)
+            / self.foil.reaction.product.decay_constant
+        )
+
+        # Correction factor of gamma-ray self-attenuation in the foil
+        if self.foil.thickness is None:
+            f_self = 1
+        else:
+            f_self = (
+                1
+                - np.exp(
+                    -self.foil.mass_attenuation_coefficient
+                    * self.foil.density
+                    * self.foil.thickness
+                )
+            ) / (
+                self.foil.mass_attenuation_coefficient
+                * self.foil.density
+                * self.foil.thickness
+            )
+
+        flux /= f_time * f_self
 
         # convert n/cm2/s to n/s
-        distance_from_target_plane = distance
-        area_of_sphere = 4 * np.pi * distance_from_target_plane**2
+        area_of_sphere = 4 * np.pi * distance**2
 
         flux *= area_of_sphere
 
