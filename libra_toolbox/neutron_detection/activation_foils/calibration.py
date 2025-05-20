@@ -25,6 +25,14 @@ class Nuclide:
     energy: List[float]
     intensity: List[float]
     half_life: float
+    atomic_mass: float = None
+
+    @property
+    def decay_constant(self):
+        """
+        Returns the decay constant of the nuclide in 1/s.
+        """
+        return np.log(2) / self.half_life
 
 
 ba133 = Nuclide(
@@ -65,6 +73,21 @@ nb92m = Nuclide(
     half_life=10.25 * 24 * 3600,
 )
 
+nb93 = Nuclide(
+    name="Nb93",
+    energy=[0.0],
+    intensity=[1.0],
+    half_life=16.13 * 365.25 * 24 * 3600,
+    atomic_mass=92.90637,
+)
+
+
+@dataclass
+class Reaction:
+    reactant: Nuclide
+    product: Nuclide
+    cross_section: float
+
 
 @dataclass
 class CheckSource:
@@ -96,6 +119,11 @@ class CheckSource:
 
 @dataclass
 class ActivationFoil:
-    nuclide: Nuclide
+    reaction: Reaction
     mass: float
     name: str
+    abundance: float = 1.0
+
+    @property
+    def nb_atoms(self):
+        return self.abundance * (self.mass / self.reaction.reactant.atomic_mass)

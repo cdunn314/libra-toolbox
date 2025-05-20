@@ -17,6 +17,10 @@ from libra_toolbox.neutron_detection.activation_foils.calibration import (
     ba133,
     mn54,
 )
+from libra_toolbox.neutron_detection.activation_foils.explicit import (
+    get_chain,
+    delay_time,
+)
 
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
@@ -377,17 +381,19 @@ class SampleMeasurement(Measurement):
 
         calibrated_bin_bedges = np.polyval(calibration_coeffs, bin_edges)
 
+        energy = self.foil.reaction.product.energy
+
         nb_counts_measured = get_multipeak_area(
             hist,
             calibrated_bin_bedges,
-            self.foil.nuclide.energy,
+            energy,
             search_width=search_width,
         )
 
         nb_counts_measured = np.array(nb_counts_measured)
         nb_counts_measured_err = np.sqrt(nb_counts_measured)
 
-        detection_efficiency = np.polyval(efficiency_coeffs, self.foil.nuclide.energy)
+        detection_efficiency = np.polyval(efficiency_coeffs, energy)
 
         gamma_emmitted = nb_counts_measured / detection_efficiency
         gamma_emmitted_err = nb_counts_measured_err / detection_efficiency
@@ -445,6 +451,66 @@ class SampleMeasurement(Measurement):
         peaks = np.array(peaks) + start_index
 
         return peaks
+
+    def get_neutron_flux(
+        self,
+        number_of_decays_measured: float,
+        irradiations: list,
+        distance: float,
+        time_generator_off: datetime.datetime,
+    ):
+        """calculates the neutron flux during the irradiation
+
+        Args:
+            number_of_decays_measured: number of decays measured
+            irradiations: list of dictionaries with keys "t_on" and "t_off" for irradiations
+            distance: distance from the target plane to the foil in cm
+
+        Returns:
+            pint.Quantity: neutron flux
+        """
+
+        flux = (
+            number_of_decays_measured
+            / self.foil.nb_atoms
+            / self.foil.reaction.cross_section
+        )
+
+        flux *= (
+            get_chain(
+                irradiations, decay_constant=self.foil.reaction.product.decay_constant
+            )
+            ** -1
+        )
+        time_between_generator_off_and_start_of_counting = (
+            time_generator_off - self.start_time
+        ).total_seconds()
+
+        flux *= (
+            -1
+            / self.foil.reaction.product.decay_constant
+            * (
+                np.exp(
+                    -self.foil.reaction.product.decay_constant
+                    * (
+                        time_between_generator_off_and_start_of_counting
+                        + (self.stop_time - self.start_time).total_seconds()
+                    )
+                )
+                - np.exp(
+                    -self.foil.reaction.product.decay_constant
+                    * time_between_generator_off_and_start_of_counting
+                )
+            )
+        ) ** -1
+
+        # convert n/cm2/s to n/s
+        distance_from_target_plane = distance
+        area_of_sphere = 4 * np.pi * distance_from_target_plane**2
+
+        flux *= area_of_sphere
+
+        return flux
 
 
 def get_calibration_data(
