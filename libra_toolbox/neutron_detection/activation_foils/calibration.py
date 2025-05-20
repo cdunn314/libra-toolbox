@@ -126,4 +126,7 @@ class ActivationFoil:
 
     @property
     def nb_atoms(self):
-        return self.abundance * (self.mass / self.reaction.reactant.atomic_mass)
+        avogadro = 6.022e23  # part/mol
+        return self.abundance * (
+            self.mass / self.reaction.reactant.atomic_mass * avogadro
+        )
