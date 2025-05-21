@@ -22,9 +22,9 @@ class Nuclide:
     """
 
     name: str
-    energy: List[float]
-    intensity: List[float]
-    half_life: float
+    energy: List[float] = None
+    intensity: List[float] = None
+    half_life: float = None
     atomic_mass: float = None
 
     @property
@@ -75,9 +75,6 @@ nb92m = Nuclide(
 
 nb93 = Nuclide(
     name="Nb93",
-    energy=[0.0],
-    intensity=[1.0],
-    half_life=16.13 * 365.25 * 24 * 3600,
     atomic_mass=92.90637,
 )
 
