@@ -17,10 +17,7 @@ from libra_toolbox.neutron_detection.activation_foils.calibration import (
     ba133,
     mn54,
 )
-from libra_toolbox.neutron_detection.activation_foils.explicit import (
-    get_chain,
-    delay_time,
-)
+from libra_toolbox.neutron_detection.activation_foils.explicit import get_chain
 
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
@@ -371,7 +368,7 @@ class CheckSourceMeasurement(Measurement):
 class SampleMeasurement(Measurement):
     foil: ActivationFoil
 
-    def get_gamma_emmited(
+    def get_gamma_emitted(
         self,
         background_measurement: Measurement,
         efficiency_coeffs,
@@ -461,7 +458,7 @@ class SampleMeasurement(Measurement):
 
         return peaks
 
-    def get_neutron_flux(
+    def get_neutron_rate(
         self,
         channel_nb: int,
         photon_counts: float,
