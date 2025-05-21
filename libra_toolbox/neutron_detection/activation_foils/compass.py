@@ -405,16 +405,15 @@ class SampleMeasurement(Measurement):
         gamma_emmitted_err = nb_counts_measured_err / detection_efficiency
         return gamma_emmitted, gamma_emmitted_err
 
-    def get_neutron_rate(
+    def get_neutron_flux(
         self,
         channel_nb: int,
         photon_counts: float,
         irradiations: list,
-        distance: float,
         time_generator_off: datetime.datetime,
         total_efficiency=1,
         branching_ratio=1,
-    ) -> float:
+    ):
         """calculates the neutron flux during the irradiation
         Based on Equation 1 from:
         Lee, Dongwon, et al. "Determination of the Deuterium-Tritium (D-T) Generator
@@ -422,12 +421,16 @@ class SampleMeasurement(Measurement):
         May. 2019. https://doi.org/10.2172/1524045
 
         Args:
+            channel_nb: channel number of the detector
             irradiations: list of dictionaries with keys "t_on" and "t_off" for irradiations
+            time_generator_off: time when the generator was turned off
+            photon_counts: number of gamma rays measured
+            total_efficiency: total efficiency of the detector
+            branching_ratio: branching ratio of the reaction
 
         Returns:
-            neutron flux
+            neutron flux in n/cm2/s
         """
-
         time_between_generator_off_and_start_of_counting = (
             self.start_time - time_generator_off
         ).total_seconds()
@@ -482,6 +485,47 @@ class SampleMeasurement(Measurement):
 
         flux /= f_time * f_self
 
+        return flux
+
+    def get_neutron_rate(
+        self,
+        channel_nb: int,
+        photon_counts: float,
+        irradiations: list,
+        distance: float,
+        time_generator_off: datetime.datetime,
+        total_efficiency=1,
+        branching_ratio=1,
+    ) -> float:
+        """
+        Calculates the neutron rate during the irradiation.
+        It assumes that the neutron flux is isotropic.
+
+        Based on Equation 1 from:
+        Lee, Dongwon, et al. "Determination of the Deuterium-Tritium (D-T) Generator
+        Neutron Flux using Multi-foil Neutron Activation Analysis Method." ,
+        May. 2019. https://doi.org/10.2172/1524045
+
+        Args:
+            channel_nb: channel number of the detector
+            irradiations: list of dictionaries with keys "t_on" and "t_off" for irradiations
+            time_generator_off: time when the generator was turned off
+            photon_counts: number of gamma rays measured
+            total_efficiency: total efficiency of the detector
+            branching_ratio: branching ratio of the reaction
+
+        Returns:
+            neutron rate in n/s
+        """
+
+        flux = self.get_neutron_flux(
+            channel_nb=channel_nb,
+            photon_counts=photon_counts,
+            irradiations=irradiations,
+            time_generator_off=time_generator_off,
+            total_efficiency=total_efficiency,
+            branching_ratio=branching_ratio,
+        )
         # convert n/cm2/s to n/s
         area_of_sphere = 4 * np.pi * distance**2
 
