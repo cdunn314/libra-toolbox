@@ -505,7 +505,7 @@ def test_check_source_detection_efficiency(expected_efficiency):
 
     activity_date = datetime.datetime(2024, 11, 7)
     half_life = 10 * 24 * 3600  # seconds  (10 days)
-    activity = 1000e1  # Bq
+    activity = 5000e1  # Bq
 
     test_nuclide = Nuclide(
         name="TestNuclide Mn54",
