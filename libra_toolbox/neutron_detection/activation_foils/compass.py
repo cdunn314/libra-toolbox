@@ -553,8 +553,6 @@ def get_calibration_data(
             if detector.channel_nb != channel_nb:
                 continue
 
-            sample = measurement.name[:-2]
-
             hist, bin_edges = detector.get_energy_hist_background_substract(
                 background_detector, bins=None
             )
