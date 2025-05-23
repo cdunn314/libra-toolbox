@@ -431,18 +431,6 @@ class SampleMeasurement(Measurement):
             self.start_time - time_generator_off
         ).total_seconds()
 
-        # Spectroscopic Factor to account for the branching ratio and the
-        # total detection efficiency
-
-        f_spec = total_efficiency * branching_ratio
-
-        number_of_decays_measured = photon_counts / f_spec
-        flux = (
-            number_of_decays_measured
-            / self.foil.nb_atoms
-            / self.foil.reaction.cross_section
-        )
-
         detector = self.get_detector(channel_nb)
 
         f_time = (
@@ -478,6 +466,18 @@ class SampleMeasurement(Measurement):
                 * self.foil.density
                 * self.foil.thickness
             )
+
+        # Spectroscopic Factor to account for the branching ratio and the
+        # total detection efficiency
+        f_spec = total_efficiency * branching_ratio
+
+        number_of_decays_measured = photon_counts / f_spec
+
+        flux = (
+            number_of_decays_measured
+            / self.foil.nb_atoms
+            / self.foil.reaction.cross_section
+        )
 
         flux /= f_time * f_self
 
