@@ -285,6 +285,11 @@ class CheckSourceMeasurement(Measurement):
         nb_counts_measured = np.array(nb_counts_measured)
         nb_counts_measured_err = np.sqrt(nb_counts_measured)
 
+        # assert that all numbers in nb_counts_measured are > 0
+        assert np.all(
+            nb_counts_measured > 0
+        ), f"Some counts measured are <= 0: {nb_counts_measured}"
+
         act_expec = self.check_source.get_expected_activity(self.start_time)
         gamma_rays_expected = act_expec * (
             np.array(self.check_source.nuclide.intensity)
