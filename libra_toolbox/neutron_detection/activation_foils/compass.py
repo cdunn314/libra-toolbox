@@ -273,11 +273,11 @@ class CheckSourceMeasurement(Measurement):
             background_detector, bins=None
         )
 
-        calibrated_bin_bedges = np.polyval(calibration_coeffs, bin_edges)
+        calibrated_bin_edges = np.polyval(calibration_coeffs, bin_edges)
 
         nb_counts_measured = get_multipeak_area(
             hist,
-            calibrated_bin_bedges,
+            calibrated_bin_edges,
             self.check_source.nuclide.energy,
             search_width=search_width,
         )
@@ -386,13 +386,13 @@ class SampleMeasurement(Measurement):
             background_detector, bins=None
         )
 
-        calibrated_bin_bedges = np.polyval(calibration_coeffs, bin_edges)
+        calibrated_bin_edges = np.polyval(calibration_coeffs, bin_edges)
 
         energy = self.foil.reaction.product.energy
 
         nb_counts_measured = get_multipeak_area(
             hist,
-            calibrated_bin_bedges,
+            calibrated_bin_edges,
             energy,
             search_width=search_width,
         )
