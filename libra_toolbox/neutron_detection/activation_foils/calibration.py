@@ -26,6 +26,7 @@ class Nuclide:
     intensity: List[float] = None
     half_life: float = None
     atomic_mass: float = None
+    abundance: float = None
 
     @property
     def decay_constant(self):
@@ -76,6 +77,20 @@ nb92m = Nuclide(
 nb93 = Nuclide(
     name="Nb93",
     atomic_mass=92.90637,
+    abundance=1.00
+)
+
+zr89 = Nuclide(
+    name="Zr89",
+    energy=[909.15],
+    intensity = [0.9904],
+    half_life=78.41 * 3600
+)
+
+zr90 = Nuclide(
+    name="Zr90",
+    atomic_mass=89.90469876,
+    abundance=0.515
 )
 
 
@@ -95,6 +110,18 @@ class Reaction:
     cross_section :
         The cross section of the reaction in cm2.
     """
+
+nb93_n2n = Reaction(
+    reactant=nb93,
+    product=nb92m,
+    cross_section=0.45966e-24 # cm2 at 14.1 MeV from IRDF-II 2020
+)
+
+zr90_n2n = Reaction(
+    reactant=zr90,
+    product=zr89,
+    cross_section=0.62389e-24 # cm2 at 14.1 MeV from IRDF-II 2020
+)
 
 
 @dataclass
@@ -151,6 +178,7 @@ class ActivationFoil:
     reaction: Reaction
     mass: float
     name: str
+    density: float
     thickness: float = None
 
     """Class to hold the information of an activation foil.
@@ -172,5 +200,4 @@ class ActivationFoil:
         Returns the number of atoms in the foil.
         """
         avogadro = 6.022e23  # part/mol
-        abundance = 1
-        return abundance * (self.mass / self.reaction.reactant.atomic_mass * avogadro)
+        return self.reaction.reactant.abundance * (self.mass / self.reaction.reactant.atomic_mass * avogadro)
