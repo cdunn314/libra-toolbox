@@ -195,7 +195,7 @@ class ActivationFoil:
     name :
         The name of the foil.
     density :
-        The density of the foil in g/cm3. Default is 1.0 g/cm3.
+        The density of the foil in g/cm3.
     thickness :
         The thickness of the foil in cm.        
     """
