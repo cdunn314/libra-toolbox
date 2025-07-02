@@ -671,13 +671,13 @@ def get_multipeak_area(
         # Use unimodal gaussian to estimate counts from just one peak
         peak_params = [parameters[0], parameters[1], parameters[2 + 3 * i], mean, sigma]
         all_peak_params += [peak_params]
-        gross_area = np.trapezoid(
+        gross_area = np.trapz(
             gauss(xvals[peak_start:peak_end], *peak_params),
             x=xvals[peak_start:peak_end],
         )
 
         # Cut off trapezoidal area due to compton scattering and noise
-        trap_cutoff_area = np.trapezoid(
+        trap_cutoff_area = np.trapz(
             parameters[0] + parameters[1] * xvals[peak_start:peak_end],
             x=xvals[peak_start:peak_end],
         )

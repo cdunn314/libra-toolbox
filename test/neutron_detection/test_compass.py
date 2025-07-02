@@ -944,3 +944,26 @@ def test_get_neutron_rate_very_moderate_life(photon_counts, distance):
     area_of_sphere = 4 * np.pi * distance**2
     expected_neutron_rate = expected_neutron_flux * area_of_sphere
     assert np.isclose(computed_rate, expected_neutron_rate)
+
+
+def test_activationfoil_density_thickness_validation():
+
+    nuclide_reactant = Nuclide(name="TestNuclide", atomic_mass=200)
+    activated_nuclide = Nuclide(
+        name="ActivatedNuclide",
+        energy=[1000],
+        intensity=[1.0],
+        half_life=10 * 24 * 3600,  # 10 days
+    )
+
+    reaction = Reaction(
+        reactant=nuclide_reactant,
+        product=activated_nuclide,
+        cross_section=20.0,
+    )
+
+    with pytest.raises(ValueError, match="Thickness and density must either both be floats or both be None."):
+        ActivationFoil(reaction=reaction, mass=1.0, name="foil", density=1.0)
+
+    with pytest.raises(ValueError, match="Thickness and density must either both be floats or both be None."):
+        ActivationFoil(reaction=reaction, mass=1.0, name="foil", thickness=0.1)
