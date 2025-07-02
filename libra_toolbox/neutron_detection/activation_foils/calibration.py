@@ -19,6 +19,10 @@ class Nuclide:
         The intensity of the gamma rays emitted by the nuclide.
     half_life :
         The half-life of the nuclide in seconds.
+    atomic_mass :
+        The atomic mass of the nuclide in atomic mass units (amu).
+    abundance :
+        The natural abundance of the nuclide as a fraction (default is 1.00).
     """
 
     name: str
