@@ -178,7 +178,7 @@ class ActivationFoil:
     reaction: Reaction
     mass: float
     name: str
-    density: float = 1.0
+    density: float = None
     thickness: float = None
 
     """Class to hold the information of an activation foil.
@@ -190,9 +190,15 @@ class ActivationFoil:
         The mass of the foil in grams.
     name :
         The name of the foil.
+    density :
+        The density of the foil in g/cm3. Default is 1.0 g/cm3.
     thickness :
         The thickness of the foil in cm.        
     """
+
+    def __post_init__(self):
+        if (self.thickness is None) != (self.density is None):
+            raise ValueError("Thickness and density must either both be floats or both be None.")
 
     @property
     def nb_atoms(self) -> float:
