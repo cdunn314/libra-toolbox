@@ -756,7 +756,7 @@ def test_get_gamma_emitted(efficiency: float):
         cross_section=20.0,
     )
 
-    foil = ActivationFoil(reaction=reaction, mass=0.1, name="TestFoil", density=1.0)
+    foil = ActivationFoil(reaction=reaction, mass=0.1, name="TestFoil")
 
     measurement = compass.SampleMeasurement("sample")
     measurement.foil = foil
@@ -825,7 +825,6 @@ def test_get_neutron_rate_very_long_half_life(photon_counts, distance):
         reaction=reaction,
         mass=0.1,
         name="TestFoil",
-        density=1.0,
         thickness=None,
     )
 
@@ -898,7 +897,6 @@ def test_get_neutron_rate_very_moderate_life(photon_counts, distance):
         reaction=reaction,
         mass=0.1,
         name="TestFoil",
-        density=1.0,
         thickness=None,
     )
 

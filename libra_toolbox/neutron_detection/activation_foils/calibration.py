@@ -26,7 +26,7 @@ class Nuclide:
     intensity: List[float] = None
     half_life: float = None
     atomic_mass: float = None
-    abundance: float = None
+    abundance: float = 1.00
 
     @property
     def decay_constant(self):
@@ -178,7 +178,7 @@ class ActivationFoil:
     reaction: Reaction
     mass: float
     name: str
-    density: float
+    density: float = 1.0
     thickness: float = None
 
     """Class to hold the information of an activation foil.
