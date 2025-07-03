@@ -107,6 +107,11 @@ class Detector:
         background_detector: "Detector",
         bins: Union[NDArray[np.float64], None] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
+
+        assert (
+            self.channel_nb == background_detector.channel_nb
+        ), f"Channel number mismatch: {self.channel_nb} != {background_detector.channel_nb}"
+
         ps_to_seconds = 1e-12
         raw_hist, raw_bin_edges = self.get_energy_hist(bins=bins)
 
@@ -115,13 +120,7 @@ class Detector:
             background_detector._spectrum is not None
             and background_detector._bin_edges is not None
         ):
-            assert (
-                raw_bin_edges == background_detector._bin_edges
-            ).all(), "Background detector bin edges do not match"
-            return (
-                raw_hist - background_detector._spectrum,
-                raw_bin_edges,
-            )
+            raise ValueError("Background spectrum and bin edges must be calculated.")
 
         background_times = background_detector.events[:, 0].copy()
         background_energies = background_detector.events[:, 1].copy()
