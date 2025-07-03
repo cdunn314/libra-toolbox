@@ -716,7 +716,7 @@ def get_calibration_data(
     background_detector = [
         detector
         for detector in background_measurement.detectors
-        if detector.channel_nb == detector.channel_nb
+        if detector.channel_nb == channel_nb
     ][0]
 
     calibration_energies = []
