@@ -10,6 +10,7 @@ from libra_toolbox.neutron_detection.activation_foils.calibration import (
 )
 from pathlib import Path
 import datetime
+import h5py
 
 
 @pytest.mark.parametrize(
@@ -967,3 +968,295 @@ def test_activationfoil_density_thickness_validation():
 
     with pytest.raises(ValueError, match="Thickness and density must either both be floats or both be None."):
         ActivationFoil(reaction=reaction, mass=1.0, name="foil", thickness=0.1)
+
+
+def create_test_measurement(name: str, num_detectors: int = 2, num_events: int = 100) -> compass.Measurement:
+    """
+    Helper function to create a test measurement with synthetic data.
+    """
+    measurement = compass.Measurement(name)
+    
+    # Set start and stop times
+    measurement.start_time = datetime.datetime(2025, 1, 1, 10, 0, 0)
+    measurement.stop_time = datetime.datetime(2025, 1, 1, 10, 15, 0)
+    
+    # Create detectors with synthetic events
+    for channel_nb in range(num_detectors):
+        detector = compass.Detector(channel_nb)
+        
+        # Generate synthetic events (time in ps, energy)
+        times = np.random.uniform(0, 1e12, num_events)  # Random times in ps
+        energies = np.random.uniform(100, 1000, num_events)  # Random energies
+        detector.events = np.column_stack((times, energies))
+        
+        # Set timing information
+        detector.live_count_time = 900.0  # 15 minutes
+        detector.real_count_time = 900.0
+        
+        measurement.detectors.append(detector)
+    
+    return measurement
+
+
+def test_measurement_to_h5_single(tmpdir):
+    """
+    Test the Measurement.to_h5 method for a single measurement.
+    """
+    # Create test measurement
+    measurement = create_test_measurement("test_measurement", num_detectors=2, num_events=50)
+    
+    # Save to HDF5
+    h5_file = os.path.join(tmpdir, "test_single.h5")
+    measurement.to_h5(h5_file, mode="w")
+    
+    # Verify file exists and has correct structure
+    assert os.path.exists(h5_file)
+    
+    with h5py.File(h5_file, "r") as f:
+        # Check measurement group exists
+        assert "test_measurement" in f
+        measurement_group = f["test_measurement"]
+        
+        # Check attributes
+        assert "start_time" in measurement_group.attrs
+        assert "stop_time" in measurement_group.attrs
+        assert measurement_group.attrs["start_time"] == "2025-01-01T10:00:00"
+        assert measurement_group.attrs["stop_time"] == "2025-01-01T10:15:00"
+        
+        # Check detectors
+        assert "detector_0" in measurement_group
+        assert "detector_1" in measurement_group
+        
+        # Check detector data
+        detector_group = measurement_group["detector_0"]
+        assert "events" in detector_group
+        assert detector_group["events"].shape[1] == 2  # time, energy columns
+        assert detector_group["events"].shape[0] == 50  # number of events
+        assert detector_group.attrs["live_count_time"] == 900.0
+        assert detector_group.attrs["real_count_time"] == 900.0
+
+
+def test_measurement_to_h5_append_mode(tmpdir):
+    """
+    Test the Measurement.to_h5 method with append mode for multiple measurements.
+    """
+    # Create test measurements
+    measurement1 = create_test_measurement("measurement_1", num_detectors=1, num_events=30)
+    measurement2 = create_test_measurement("measurement_2", num_detectors=2, num_events=40)
+    
+    h5_file = os.path.join(tmpdir, "test_append.h5")
+    
+    # Save first measurement
+    measurement1.to_h5(h5_file, mode="w")
+    
+    # Append second measurement
+    measurement2.to_h5(h5_file, mode="a")
+    
+    # Verify both measurements are in the file
+    with h5py.File(h5_file, "r") as f:
+        assert "measurement_1" in f
+        assert "measurement_2" in f
+        
+        # Check first measurement
+        assert "detector_0" in f["measurement_1"]
+        assert f["measurement_1"]["detector_0"]["events"].shape[0] == 30
+        
+        # Check second measurement
+        assert "detector_0" in f["measurement_2"]
+        assert "detector_1" in f["measurement_2"]
+        assert f["measurement_2"]["detector_0"]["events"].shape[0] == 40
+
+
+def test_measurement_to_h5_overwrite_existing(tmpdir):
+    """
+    Test that writing a measurement with the same name overwrites the existing one.
+    """
+    # Create initial measurement
+    measurement1 = create_test_measurement("same_name", num_detectors=1, num_events=30)
+    measurement1.detectors[0].live_count_time = 100.0
+    
+    # Create updated measurement with same name
+    measurement2 = create_test_measurement("same_name", num_detectors=1, num_events=50)
+    measurement2.detectors[0].live_count_time = 200.0
+    
+    h5_file = os.path.join(tmpdir, "test_overwrite.h5")
+    
+    # Save first measurement
+    measurement1.to_h5(h5_file, mode="w")
+    
+    # Overwrite with second measurement
+    measurement2.to_h5(h5_file, mode="a")
+    
+    # Verify only the second measurement data remains
+    with h5py.File(h5_file, "r") as f:
+        assert "same_name" in f
+        detector_group = f["same_name"]["detector_0"]
+        assert detector_group["events"].shape[0] == 50  # New data
+        assert detector_group.attrs["live_count_time"] == 200.0  # New timing
+
+
+def test_measurement_write_multiple_to_h5(tmpdir):
+    """
+    Test the Measurement.write_multiple_to_h5 class method.
+    """
+    # Create multiple test measurements
+    measurements = [
+        create_test_measurement("exp_1", num_detectors=1, num_events=20),
+        create_test_measurement("exp_2", num_detectors=2, num_events=30),
+        create_test_measurement("exp_3", num_detectors=3, num_events=40),
+    ]
+    
+    h5_file = os.path.join(tmpdir, "test_multiple.h5")
+    
+    # Write all measurements to file
+    compass.Measurement.write_multiple_to_h5(measurements, h5_file)
+    
+    # Verify all measurements are in the file
+    with h5py.File(h5_file, "r") as f:
+        assert "exp_1" in f
+        assert "exp_2" in f
+        assert "exp_3" in f
+        
+        # Check each measurement has correct number of detectors
+        assert len([k for k in f["exp_1"].keys() if k.startswith("detector_")]) == 1
+        assert len([k for k in f["exp_2"].keys() if k.startswith("detector_")]) == 2
+        assert len([k for k in f["exp_3"].keys() if k.startswith("detector_")]) == 3
+        
+        # Check event counts
+        assert f["exp_1"]["detector_0"]["events"].shape[0] == 20
+        assert f["exp_2"]["detector_0"]["events"].shape[0] == 30
+        assert f["exp_3"]["detector_0"]["events"].shape[0] == 40
+
+
+def test_measurement_from_h5_single(tmpdir):
+    """
+    Test the Measurement.from_h5 method for loading a single measurement.
+    """
+    # Create and save a test measurement
+    original_measurement = create_test_measurement("test_load", num_detectors=2, num_events=35)
+    h5_file = os.path.join(tmpdir, "test_load_single.h5")
+    original_measurement.to_h5(h5_file)
+    
+    # Load the measurement back
+    loaded_measurement = compass.Measurement.from_h5(h5_file, measurement_name="test_load")
+    
+    # Verify loaded measurement matches original
+    assert loaded_measurement.name == "test_load"
+    assert loaded_measurement.start_time == original_measurement.start_time
+    assert loaded_measurement.stop_time == original_measurement.stop_time
+    assert len(loaded_measurement.detectors) == 2
+    
+    # Check detector data
+    for i, detector in enumerate(loaded_measurement.detectors):
+        original_detector = original_measurement.detectors[i]
+        assert detector.channel_nb == original_detector.channel_nb
+        assert detector.live_count_time == original_detector.live_count_time
+        assert detector.real_count_time == original_detector.real_count_time
+        np.testing.assert_array_equal(detector.events, original_detector.events)
+
+
+def test_measurement_from_h5_all_measurements(tmpdir):
+    """
+    Test the Measurement.from_h5 method for loading all measurements from a file.
+    """
+    # Create and save multiple measurements
+    measurements = [
+        create_test_measurement("load_1", num_detectors=1, num_events=25),
+        create_test_measurement("load_2", num_detectors=2, num_events=35),
+    ]
+    
+    h5_file = os.path.join(tmpdir, "test_load_all.h5")
+    compass.Measurement.write_multiple_to_h5(measurements, h5_file)
+    
+    # Load all measurements
+    loaded_measurements = compass.Measurement.from_h5(h5_file)
+    
+    # Verify we got all measurements
+    assert len(loaded_measurements) == 2
+    loaded_names = [m.name for m in loaded_measurements]
+    assert "load_1" in loaded_names
+    assert "load_2" in loaded_names
+    
+    # Find corresponding measurements
+    load_1 = next(m for m in loaded_measurements if m.name == "load_1")
+    load_2 = next(m for m in loaded_measurements if m.name == "load_2")
+    
+    assert len(load_1.detectors) == 1
+    assert len(load_2.detectors) == 2
+    assert load_1.detectors[0].events.shape[0] == 25
+    assert load_2.detectors[0].events.shape[0] == 35
+
+
+def test_measurement_from_h5_nonexistent_measurement(tmpdir):
+    """
+    Test that loading a non-existent measurement raises appropriate error.
+    """
+    # Create a measurement and save it
+    measurement = create_test_measurement("existing", num_detectors=1, num_events=10)
+    h5_file = os.path.join(tmpdir, "test_nonexistent.h5")
+    measurement.to_h5(h5_file)
+    
+    # Try to load a non-existent measurement
+    with pytest.raises(ValueError, match="Measurement 'nonexistent' not found in file"):
+        compass.Measurement.from_h5(h5_file, measurement_name="nonexistent")
+
+
+def test_measurement_h5_roundtrip(tmpdir):
+    """
+    Test complete roundtrip: create -> save -> load -> verify data integrity.
+    """
+    # Create measurement with specific, verifiable data
+    measurement = compass.Measurement("roundtrip_test")
+    measurement.start_time = datetime.datetime(2025, 7, 2, 14, 30, 0)
+    measurement.stop_time = datetime.datetime(2025, 7, 2, 15, 0, 0)
+    
+    # Create detector with specific events
+    detector = compass.Detector(channel_nb=5)
+    detector.events = np.array([
+        [1000000000, 150.5],  # time in ps, energy
+        [2000000000, 250.7],
+        [3000000000, 350.9],
+    ])
+    detector.live_count_time = 1800.0
+    detector.real_count_time = 1800.0
+    measurement.detectors = [detector]
+    
+    # Save and load
+    h5_file = os.path.join(tmpdir, "roundtrip.h5")
+    measurement.to_h5(h5_file)
+    loaded_measurement = compass.Measurement.from_h5(h5_file, measurement_name="roundtrip_test")
+    
+    # Verify exact data integrity
+    assert loaded_measurement.name == "roundtrip_test"
+    assert loaded_measurement.start_time == measurement.start_time
+    assert loaded_measurement.stop_time == measurement.stop_time
+    assert len(loaded_measurement.detectors) == 1
+    
+    loaded_detector = loaded_measurement.detectors[0]
+    assert loaded_detector.channel_nb == 5
+    assert loaded_detector.live_count_time == 1800.0
+    assert loaded_detector.real_count_time == 1800.0
+    np.testing.assert_array_equal(loaded_detector.events, detector.events)
+
+
+def test_measurement_h5_empty_measurement(tmpdir):
+    """
+    Test saving and loading a measurement with no detectors.
+    """
+    # Create empty measurement
+    measurement = compass.Measurement("empty_test")
+    measurement.start_time = datetime.datetime(2025, 1, 1, 12, 0, 0)
+    measurement.stop_time = datetime.datetime(2025, 1, 1, 12, 30, 0)
+    measurement.detectors = []  # No detectors
+    
+    # Save and load
+    h5_file = os.path.join(tmpdir, "empty.h5")
+    measurement.to_h5(h5_file)
+    loaded_measurement = compass.Measurement.from_h5(h5_file, measurement_name="empty_test")
+    
+    # Verify empty measurement
+    assert loaded_measurement.name == "empty_test"
+    assert loaded_measurement.start_time == measurement.start_time
+    assert loaded_measurement.stop_time == measurement.stop_time
+    assert len(loaded_measurement.detectors) == 0
+
