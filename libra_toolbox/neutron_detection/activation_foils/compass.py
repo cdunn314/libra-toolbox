@@ -7,6 +7,7 @@ from typing import Tuple, Dict, List, Union
 import datetime
 import uproot
 import glob
+import h5py
 
 import warnings
 from libra_toolbox.neutron_detection.activation_foils.calibration import (
@@ -218,6 +219,115 @@ class Measurement:
         measurement_object.detectors = detectors
 
         return measurement_object
+
+    def to_h5(self, filename: str, mode: str = "w") -> None:
+        """
+        Save the measurement data to an HDF5 file.
+        Args:
+            filename: name of the output HDF5 file
+            mode: file opening mode ('w' for write/overwrite, 'a' for append)
+        """
+        with h5py.File(filename, mode) as f:
+            # Create a group for the measurement (or get existing one)
+            if self.name in f:
+                # If group already exists, we could either raise an error or overwrite
+                # For now, let's overwrite the existing group
+                del f[self.name]
+            measurement_group = f.create_group(self.name)
+
+            # Store start and stop time
+            if self.start_time:
+                measurement_group.attrs["start_time"] = self.start_time.isoformat()
+            if self.stop_time:
+                measurement_group.attrs["stop_time"] = self.stop_time.isoformat()
+
+            # Store detectors
+            for detector in self.detectors:
+                detector_group = measurement_group.create_group(f"detector_{detector.channel_nb}")
+                detector_group.create_dataset("events", data=detector.events)
+                detector_group.attrs["live_count_time"] = detector.live_count_time
+                detector_group.attrs["real_count_time"] = detector.real_count_time
+
+    @classmethod
+    def from_h5(cls, filename: str, measurement_name: str = None) -> Union["Measurement", List["Measurement"]]:
+        """
+        Load measurement data from an HDF5 file.
+        Args:
+            filename: name of the HDF5 file
+            measurement_name: specific measurement name to load. If None, loads all measurements.
+        Returns:
+            Single Measurement object if measurement_name is specified, 
+            or list of Measurement objects if loading all measurements.
+        """
+        measurements = []
+        
+        with h5py.File(filename, "r") as f:
+            # Get all measurement group names
+            measurement_names = [name for name in f.keys() if isinstance(f[name], h5py.Group)]
+            
+            if measurement_name is not None:
+                if measurement_name not in measurement_names:
+                    raise ValueError(f"Measurement '{measurement_name}' not found in file. Available: {measurement_names}")
+                measurement_names = [measurement_name]
+            
+            for name in measurement_names:
+                measurement = cls(name=name)
+                measurement_group = f[name]
+                
+                # Load start and stop time
+                if "start_time" in measurement_group.attrs:
+                    measurement.start_time = datetime.datetime.fromisoformat(
+                        measurement_group.attrs["start_time"]
+                    )
+                if "stop_time" in measurement_group.attrs:
+                    measurement.stop_time = datetime.datetime.fromisoformat(
+                        measurement_group.attrs["stop_time"]
+                    )
+                
+                # Load detectors
+                detectors = []
+                for detector_name in measurement_group.keys():
+                    if detector_name.startswith("detector_"):
+                        channel_nb = int(detector_name.replace("detector_", ""))
+                        detector = Detector(channel_nb=channel_nb)
+                        
+                        detector_group = measurement_group[detector_name]
+                        detector.events = detector_group["events"][:]
+                        detector.live_count_time = detector_group.attrs["live_count_time"]
+                        detector.real_count_time = detector_group.attrs["real_count_time"]
+                        
+                        detectors.append(detector)
+                
+                measurement.detectors = detectors
+                measurements.append(measurement)
+        
+        return measurements[0] if measurement_name is not None else measurements
+
+    @classmethod
+    def write_multiple_to_h5(cls, measurements: List["Measurement"], filename: str) -> None:
+        """
+        Save multiple measurement objects to a single HDF5 file.
+        Args:
+            measurements: list of Measurement objects to save
+            filename: name of the output HDF5 file
+        """
+        with h5py.File(filename, "w") as f:
+            for measurement in measurements:
+                # Create a group for each measurement
+                measurement_group = f.create_group(measurement.name)
+
+                # Store start and stop time
+                if measurement.start_time:
+                    measurement_group.attrs["start_time"] = measurement.start_time.isoformat()
+                if measurement.stop_time:
+                    measurement_group.attrs["stop_time"] = measurement.stop_time.isoformat()
+
+                # Store detectors
+                for detector in measurement.detectors:
+                    detector_group = measurement_group.create_group(f"detector_{detector.channel_nb}")
+                    detector_group.create_dataset("events", data=detector.events)
+                    detector_group.attrs["live_count_time"] = detector.live_count_time
+                    detector_group.attrs["real_count_time"] = detector.real_count_time
 
     def get_detector(self, channel_nb: int) -> Detector:
         """
