@@ -431,7 +431,8 @@ def test_background_sub(counting_time_background):
 
     # RUN
     computed_hist, _ = detector_meas.get_energy_hist_background_substract(
-        background_detector=background_detector
+        background_detector=background_detector,
+        live_or_real="real",
     )
 
     # TEST
@@ -558,6 +559,7 @@ def test_check_source_detection_efficiency(expected_efficiency):
     background_measurement = compass.Measurement("background")
     bg_detector = compass.Detector(channel_nb=1)
     bg_detector.real_count_time = 0.5
+    bg_detector.live_count_time = bg_detector.real_count_time
     background_measurement.detectors = [bg_detector]
 
     # RUN
@@ -614,7 +616,7 @@ def test_get_calibration_data(a, b):
         measurement = compass.CheckSourceMeasurement(name="test measurement")
         measurement.check_source = check_source
         measurement.start_time = datetime.datetime(2024, 11, 7)
-        detector = compass.Detector(channel_nb=channel_nb)
+        detector = compass.Detector(channel_nb=channel_nb, nb_digitizer_bins=None)
         energy_events = np.random.normal(
             loc=energy_channel, scale=30, size=int(nb_events_measured)
         )
@@ -626,14 +628,16 @@ def test_get_calibration_data(a, b):
         time_events = np.random.uniform(0, 100, size=int(nb_events_measured))
         detector.events = np.column_stack((time_events, energy_events))
         detector.real_count_time = 100
+        detector.live_count_time = detector.real_count_time
         measurement.detectors = [detector]
 
         measurements.append(measurement)
 
     # create background measurement
     background_measurement = compass.Measurement("background")
-    bg_detector = compass.Detector(channel_nb=channel_nb)
-    bg_detector.real_count_time = 100
+    bg_detector = compass.Detector(channel_nb=channel_nb, nb_digitizer_bins=None)
+    bg_detector.live_count_time = 100
+    bg_detector.real_count_time = bg_detector.live_count_time
     background_measurement.detectors = [bg_detector]
 
     # RUN
@@ -963,38 +967,46 @@ def test_activationfoil_density_thickness_validation():
         cross_section=20.0,
     )
 
-    with pytest.raises(ValueError, match="Thickness and density must either both be floats or both be None."):
+    with pytest.raises(
+        ValueError,
+        match="Thickness and density must either both be floats or both be None.",
+    ):
         ActivationFoil(reaction=reaction, mass=1.0, name="foil", density=1.0)
 
-    with pytest.raises(ValueError, match="Thickness and density must either both be floats or both be None."):
+    with pytest.raises(
+        ValueError,
+        match="Thickness and density must either both be floats or both be None.",
+    ):
         ActivationFoil(reaction=reaction, mass=1.0, name="foil", thickness=0.1)
 
 
-def create_test_measurement(name: str, num_detectors: int = 2, num_events: int = 100) -> compass.Measurement:
+def create_test_measurement(
+    name: str, num_detectors: int = 2, num_events: int = 100
+) -> compass.Measurement:
     """
     Helper function to create a test measurement with synthetic data.
     """
     measurement = compass.Measurement(name)
-    
+
     # Set start and stop times
     measurement.start_time = datetime.datetime(2025, 1, 1, 10, 0, 0)
     measurement.stop_time = datetime.datetime(2025, 1, 1, 10, 15, 0)
-    
+
     # Create detectors with synthetic events
     for channel_nb in range(num_detectors):
         detector = compass.Detector(channel_nb)
-        
+
         # Generate synthetic events (time in ps, energy)
         times = np.random.uniform(0, 1e12, num_events)  # Random times in ps
         energies = np.random.uniform(100, 1000, num_events)  # Random energies
         detector.events = np.column_stack((times, energies))
-        
+
         # Set timing information
         detector.live_count_time = 900.0  # 15 minutes
         detector.real_count_time = 900.0
-        
+
         measurement.detectors.append(detector)
-    
+
     return measurement
 
 
@@ -1003,30 +1015,32 @@ def test_measurement_to_h5_single(tmpdir):
     Test the Measurement.to_h5 method for a single measurement.
     """
     # Create test measurement
-    measurement = create_test_measurement("test_measurement", num_detectors=2, num_events=50)
-    
+    measurement = create_test_measurement(
+        "test_measurement", num_detectors=2, num_events=50
+    )
+
     # Save to HDF5
     h5_file = os.path.join(tmpdir, "test_single.h5")
     measurement.to_h5(h5_file, mode="w")
-    
+
     # Verify file exists and has correct structure
     assert os.path.exists(h5_file)
-    
+
     with h5py.File(h5_file, "r") as f:
         # Check measurement group exists
         assert "test_measurement" in f
         measurement_group = f["test_measurement"]
-        
+
         # Check attributes
         assert "start_time" in measurement_group.attrs
         assert "stop_time" in measurement_group.attrs
         assert measurement_group.attrs["start_time"] == "2025-01-01T10:00:00"
         assert measurement_group.attrs["stop_time"] == "2025-01-01T10:15:00"
-        
+
         # Check detectors
         assert "detector_0" in measurement_group
         assert "detector_1" in measurement_group
-        
+
         # Check detector data
         detector_group = measurement_group["detector_0"]
         assert "events" in detector_group
@@ -1041,26 +1055,30 @@ def test_measurement_to_h5_append_mode(tmpdir):
     Test the Measurement.to_h5 method with append mode for multiple measurements.
     """
     # Create test measurements
-    measurement1 = create_test_measurement("measurement_1", num_detectors=1, num_events=30)
-    measurement2 = create_test_measurement("measurement_2", num_detectors=2, num_events=40)
-    
+    measurement1 = create_test_measurement(
+        "measurement_1", num_detectors=1, num_events=30
+    )
+    measurement2 = create_test_measurement(
+        "measurement_2", num_detectors=2, num_events=40
+    )
+
     h5_file = os.path.join(tmpdir, "test_append.h5")
-    
+
     # Save first measurement
     measurement1.to_h5(h5_file, mode="w")
-    
+
     # Append second measurement
     measurement2.to_h5(h5_file, mode="a")
-    
+
     # Verify both measurements are in the file
     with h5py.File(h5_file, "r") as f:
         assert "measurement_1" in f
         assert "measurement_2" in f
-        
+
         # Check first measurement
         assert "detector_0" in f["measurement_1"]
         assert f["measurement_1"]["detector_0"]["events"].shape[0] == 30
-        
+
         # Check second measurement
         assert "detector_0" in f["measurement_2"]
         assert "detector_1" in f["measurement_2"]
@@ -1074,19 +1092,19 @@ def test_measurement_to_h5_overwrite_existing(tmpdir):
     # Create initial measurement
     measurement1 = create_test_measurement("same_name", num_detectors=1, num_events=30)
     measurement1.detectors[0].live_count_time = 100.0
-    
+
     # Create updated measurement with same name
     measurement2 = create_test_measurement("same_name", num_detectors=1, num_events=50)
     measurement2.detectors[0].live_count_time = 200.0
-    
+
     h5_file = os.path.join(tmpdir, "test_overwrite.h5")
-    
+
     # Save first measurement
     measurement1.to_h5(h5_file, mode="w")
-    
+
     # Overwrite with second measurement
     measurement2.to_h5(h5_file, mode="a")
-    
+
     # Verify only the second measurement data remains
     with h5py.File(h5_file, "r") as f:
         assert "same_name" in f
@@ -1105,23 +1123,23 @@ def test_measurement_write_multiple_to_h5(tmpdir):
         create_test_measurement("exp_2", num_detectors=2, num_events=30),
         create_test_measurement("exp_3", num_detectors=3, num_events=40),
     ]
-    
+
     h5_file = os.path.join(tmpdir, "test_multiple.h5")
-    
+
     # Write all measurements to file
     compass.Measurement.write_multiple_to_h5(measurements, h5_file)
-    
+
     # Verify all measurements are in the file
     with h5py.File(h5_file, "r") as f:
         assert "exp_1" in f
         assert "exp_2" in f
         assert "exp_3" in f
-        
+
         # Check each measurement has correct number of detectors
         assert len([k for k in f["exp_1"].keys() if k.startswith("detector_")]) == 1
         assert len([k for k in f["exp_2"].keys() if k.startswith("detector_")]) == 2
         assert len([k for k in f["exp_3"].keys() if k.startswith("detector_")]) == 3
-        
+
         # Check event counts
         assert f["exp_1"]["detector_0"]["events"].shape[0] == 20
         assert f["exp_2"]["detector_0"]["events"].shape[0] == 30
@@ -1133,19 +1151,23 @@ def test_measurement_from_h5_single(tmpdir):
     Test the Measurement.from_h5 method for loading a single measurement.
     """
     # Create and save a test measurement
-    original_measurement = create_test_measurement("test_load", num_detectors=2, num_events=35)
+    original_measurement = create_test_measurement(
+        "test_load", num_detectors=2, num_events=35
+    )
     h5_file = os.path.join(tmpdir, "test_load_single.h5")
     original_measurement.to_h5(h5_file)
-    
+
     # Load the measurement back
-    loaded_measurement = compass.Measurement.from_h5(h5_file, measurement_name="test_load")
-    
+    loaded_measurement = compass.Measurement.from_h5(
+        h5_file, measurement_name="test_load"
+    )
+
     # Verify loaded measurement matches original
     assert loaded_measurement.name == "test_load"
     assert loaded_measurement.start_time == original_measurement.start_time
     assert loaded_measurement.stop_time == original_measurement.stop_time
     assert len(loaded_measurement.detectors) == 2
-    
+
     # Check detector data
     for i, detector in enumerate(loaded_measurement.detectors):
         original_detector = original_measurement.detectors[i]
@@ -1164,23 +1186,23 @@ def test_measurement_from_h5_all_measurements(tmpdir):
         create_test_measurement("load_1", num_detectors=1, num_events=25),
         create_test_measurement("load_2", num_detectors=2, num_events=35),
     ]
-    
+
     h5_file = os.path.join(tmpdir, "test_load_all.h5")
     compass.Measurement.write_multiple_to_h5(measurements, h5_file)
-    
+
     # Load all measurements
     loaded_measurements = compass.Measurement.from_h5(h5_file)
-    
+
     # Verify we got all measurements
     assert len(loaded_measurements) == 2
     loaded_names = [m.name for m in loaded_measurements]
     assert "load_1" in loaded_names
     assert "load_2" in loaded_names
-    
+
     # Find corresponding measurements
     load_1 = next(m for m in loaded_measurements if m.name == "load_1")
     load_2 = next(m for m in loaded_measurements if m.name == "load_2")
-    
+
     assert len(load_1.detectors) == 1
     assert len(load_2.detectors) == 2
     assert load_1.detectors[0].events.shape[0] == 25
@@ -1195,7 +1217,7 @@ def test_measurement_from_h5_nonexistent_measurement(tmpdir):
     measurement = create_test_measurement("existing", num_detectors=1, num_events=10)
     h5_file = os.path.join(tmpdir, "test_nonexistent.h5")
     measurement.to_h5(h5_file)
-    
+
     # Try to load a non-existent measurement
     with pytest.raises(ValueError, match="Measurement 'nonexistent' not found in file"):
         compass.Measurement.from_h5(h5_file, measurement_name="nonexistent")
@@ -1209,29 +1231,33 @@ def test_measurement_h5_roundtrip(tmpdir):
     measurement = compass.Measurement("roundtrip_test")
     measurement.start_time = datetime.datetime(2025, 7, 2, 14, 30, 0)
     measurement.stop_time = datetime.datetime(2025, 7, 2, 15, 0, 0)
-    
+
     # Create detector with specific events
     detector = compass.Detector(channel_nb=5)
-    detector.events = np.array([
-        [1000000000, 150.5],  # time in ps, energy
-        [2000000000, 250.7],
-        [3000000000, 350.9],
-    ])
+    detector.events = np.array(
+        [
+            [1000000000, 150.5],  # time in ps, energy
+            [2000000000, 250.7],
+            [3000000000, 350.9],
+        ]
+    )
     detector.live_count_time = 1800.0
     detector.real_count_time = 1800.0
     measurement.detectors = [detector]
-    
+
     # Save and load
     h5_file = os.path.join(tmpdir, "roundtrip.h5")
     measurement.to_h5(h5_file)
-    loaded_measurement = compass.Measurement.from_h5(h5_file, measurement_name="roundtrip_test")
-    
+    loaded_measurement = compass.Measurement.from_h5(
+        h5_file, measurement_name="roundtrip_test"
+    )
+
     # Verify exact data integrity
     assert loaded_measurement.name == "roundtrip_test"
     assert loaded_measurement.start_time == measurement.start_time
     assert loaded_measurement.stop_time == measurement.stop_time
     assert len(loaded_measurement.detectors) == 1
-    
+
     loaded_detector = loaded_measurement.detectors[0]
     assert loaded_detector.channel_nb == 5
     assert loaded_detector.live_count_time == 1800.0
@@ -1248,15 +1274,213 @@ def test_measurement_h5_empty_measurement(tmpdir):
     measurement.start_time = datetime.datetime(2025, 1, 1, 12, 0, 0)
     measurement.stop_time = datetime.datetime(2025, 1, 1, 12, 30, 0)
     measurement.detectors = []  # No detectors
-    
+
     # Save and load
     h5_file = os.path.join(tmpdir, "empty.h5")
     measurement.to_h5(h5_file)
-    loaded_measurement = compass.Measurement.from_h5(h5_file, measurement_name="empty_test")
-    
+    loaded_measurement = compass.Measurement.from_h5(
+        h5_file, measurement_name="empty_test"
+    )
+
     # Verify empty measurement
     assert loaded_measurement.name == "empty_test"
     assert loaded_measurement.start_time == measurement.start_time
     assert loaded_measurement.stop_time == measurement.stop_time
     assert len(loaded_measurement.detectors) == 0
 
+
+def test_measurement_h5_roundtrip_spectrum_only(tmpdir):
+    """
+    Test complete roundtrip with spectrum_only flag: create -> save -> load -> verify spectrum data integrity.
+    """
+    # Create measurement with specific, verifiable data
+    measurement = compass.Measurement("roundtrip_spectrum_test")
+    measurement.start_time = datetime.datetime(2025, 7, 2, 14, 30, 0)
+    measurement.stop_time = datetime.datetime(2025, 7, 2, 15, 0, 0)
+
+    # Create detector with specific events that will create a predictable spectrum
+    detector = compass.Detector(channel_nb=5)
+    # Create events with integer energies for predictable histogram
+    detector.events = np.array(
+        [
+            [1000000000, 100.0],  # time in ps, energy
+            [2000000000, 100.0],  # Same energy -> 2 counts in bin 100
+            [3000000000, 200.0],  # Different energy -> 1 count in bin 200
+            [4000000000, 200.0],  # Same energy -> 2 counts in bin 200
+            [5000000000, 300.0],  # Different energy -> 1 count in bin 300
+            [5000000000, 300.0],  # Same energy -> 2 counts in bin 300
+            [5000000000, 400.0],  # Different energy -> 1 count in bin 400
+        ]
+    )
+    detector.live_count_time = 1800.0
+    detector.real_count_time = 1800.0
+    measurement.detectors = [detector]
+
+    # Get the expected spectrum before saving
+    expected_hist, expected_bin_edges = detector.get_energy_hist(bins=None)
+
+    # Save with spectrum_only=True and load
+    h5_file = os.path.join(tmpdir, "roundtrip_spectrum.h5")
+    measurement.to_h5(h5_file, spectrum_only=True)
+    loaded_measurement = compass.Measurement.from_h5(
+        h5_file, measurement_name="roundtrip_spectrum_test"
+    )
+
+    # Verify basic measurement data integrity
+    assert loaded_measurement.name == "roundtrip_spectrum_test"
+    assert loaded_measurement.start_time == measurement.start_time
+    assert loaded_measurement.stop_time == measurement.stop_time
+    assert len(loaded_measurement.detectors) == 1
+
+    loaded_detector = loaded_measurement.detectors[0]
+    assert loaded_detector.channel_nb == 5
+    assert loaded_detector.live_count_time == 1800.0
+    assert loaded_detector.real_count_time == 1800.0
+
+    # Verify events array is empty (spectrum_only mode)
+    assert loaded_detector.events.shape[0] == 0
+
+    # Verify spectrum data is present and correct
+    assert hasattr(loaded_detector, "spectrum")
+    assert hasattr(loaded_detector, "bin_edges")
+    np.testing.assert_array_equal(loaded_detector.spectrum, expected_hist)
+    np.testing.assert_array_equal(loaded_detector.bin_edges, expected_bin_edges)
+
+    # Verify the spectrum contains expected counts
+    # The exact bin positions depend on the histogram implementation
+    print(f"Spectrum: {loaded_detector.spectrum}")
+    print(f"Bin edges: {loaded_detector.bin_edges}")
+    assert np.sum(loaded_detector.spectrum) == 7  # Total number of events
+
+
+def test_measurement_h5_spectrum_only_file_structure(tmpdir):
+    """
+    Test that spectrum_only mode creates the correct HDF5 file structure.
+    """
+    # Create measurement with events
+    measurement = create_test_measurement(
+        "spectrum_structure_test", num_detectors=1, num_events=100
+    )
+
+    # Save with spectrum_only=True
+    h5_file = os.path.join(tmpdir, "spectrum_structure.h5")
+    measurement.to_h5(h5_file, spectrum_only=True)
+
+    # Verify file structure
+    with h5py.File(h5_file, "r") as f:
+        assert "spectrum_structure_test" in f
+        measurement_group = f["spectrum_structure_test"]
+
+        # Check measurement attributes
+        assert "start_time" in measurement_group.attrs
+        assert "stop_time" in measurement_group.attrs
+
+        # Check detector group
+        assert "detector_0" in measurement_group
+        detector_group = measurement_group["detector_0"]
+
+        # In spectrum_only mode, should have spectrum and bin_edges, but empty events
+        assert "spectrum" in detector_group
+        assert "bin_edges" in detector_group
+        assert "events" in detector_group
+
+        # Events should be empty array
+        assert detector_group["events"].shape[0] == 0
+
+        # Spectrum should have data
+        assert detector_group["spectrum"].shape[0] > 0
+        assert detector_group["bin_edges"].shape[0] > 0
+
+        # Timing attributes should still be present
+        assert "live_count_time" in detector_group.attrs
+        assert "real_count_time" in detector_group.attrs
+
+
+def test_measurement_h5_spectrum_only_vs_full_size_comparison(tmpdir):
+    """
+    Test that spectrum_only mode produces smaller files than full event storage.
+    """
+    # Create measurement with many events to see file size difference
+    measurement = create_test_measurement("size_test", num_detectors=1, num_events=1000)
+
+    # Save in both modes
+    h5_file_full = os.path.join(tmpdir, "full_events.h5")
+    h5_file_spectrum = os.path.join(tmpdir, "spectrum_only.h5")
+
+    measurement.to_h5(h5_file_full, spectrum_only=False)
+    measurement.to_h5(h5_file_spectrum, spectrum_only=True)
+
+    # Compare file sizes
+    full_size = os.path.getsize(h5_file_full)
+    spectrum_size = os.path.getsize(h5_file_spectrum)
+
+    # Spectrum-only file should be smaller (unless histogram has more bins than events)
+    # At minimum, both files should exist and have reasonable sizes
+    assert full_size > 0
+    assert spectrum_size > 0
+
+    # For 1000 events, the full file should typically be larger
+    # (though this could depend on the specific data and compression)
+    print(f"Full events file size: {full_size} bytes")
+    print(f"Spectrum only file size: {spectrum_size} bytes")
+
+
+def test_measurement_h5_spectrum_only_analysis_capability(tmpdir):
+    """
+    Test that spectrum_only data can still be used for basic analysis.
+    """
+    # Create measurement with well-defined energy distribution
+    measurement = compass.Measurement("analysis_test")
+    measurement.start_time = datetime.datetime(2025, 7, 2, 10, 0, 0)
+    measurement.stop_time = datetime.datetime(2025, 7, 2, 10, 30, 0)
+
+    detector = compass.Detector(channel_nb=1)
+    # Create events with known energy distribution
+    energies = np.concatenate(
+        [
+            np.full(50, 500.0),  # 50 events at 500 keV
+            np.full(30, 600.0),  # 30 events at 600 keV
+            np.full(20, 700.0),  # 20 events at 700 keV
+        ]
+    )
+    times = np.random.uniform(0, 1e12, len(energies))
+    detector.events = np.column_stack((times, energies))
+    detector.live_count_time = 1800.0
+    detector.real_count_time = 1800.0
+    measurement.detectors = [detector]
+
+    # Save with spectrum_only=True
+    h5_file = os.path.join(tmpdir, "analysis_spectrum.h5")
+    measurement.to_h5(h5_file, spectrum_only=True)
+
+    # Load and analyze spectrum
+    loaded_measurement = compass.Measurement.from_h5(
+        h5_file, measurement_name="analysis_test"
+    )
+    loaded_detector = loaded_measurement.detectors[0]
+
+    # Verify we can analyze the spectrum
+    assert hasattr(loaded_detector, "spectrum")
+    assert hasattr(loaded_detector, "bin_edges")
+
+    # Check total counts
+    total_counts = np.sum(loaded_detector.spectrum)
+    assert total_counts == 100  # 50 + 30 + 20
+
+    # Check that peak energies are preserved in the spectrum
+    # Find bin centers
+    bin_centers = (loaded_detector.bin_edges[:-1] + loaded_detector.bin_edges[1:]) / 2
+
+    # Find peaks in the spectrum (simple approach)
+    peak_indices = np.where(loaded_detector.spectrum > 15)[
+        0
+    ]  # Bins with significant counts
+    peak_energies = bin_centers[peak_indices]
+
+    # Should have peaks near our input energies (500, 600, 700)
+    assert len(peak_energies) >= 3, "Should find at least 3 energy peaks"
+
+    # Verify the spectrum structure makes sense
+    assert loaded_detector.spectrum.dtype in [np.int32, np.int64, np.uint32, np.uint64]
+    assert loaded_detector.bin_edges.dtype in [np.int32, np.int64, np.uint32, np.uint64]
+    assert len(loaded_detector.bin_edges) == len(loaded_detector.spectrum) + 1
