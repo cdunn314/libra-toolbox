@@ -47,13 +47,15 @@ class Detector:
     _spectrum: Union[NDArray[np.float64], None] = None
     _bin_edges: Union[NDArray[np.float64], None] = None
 
-    def __init__(self, channel_nb) -> None:
+    def __init__(self, channel_nb, nb_digitizer_bins=4096) -> None:
         """
         Initialize a Detector object.
         Args:
             channel_nb: channel number of the detector
+            nb_digitizer_bins: number of digitizer bins for the detector.
         """
         self.channel_nb = channel_nb
+        self.nb_digitizer_bins = nb_digitizer_bins
         self.events = np.empty((0, 2))  # Initialize as empty 2D array with 2 columns
         self.live_count_time = None
         self.real_count_time = None
@@ -96,9 +98,12 @@ class Detector:
         energy_values = np.nan_to_num(energy_values, nan=0)
 
         if bins is None:
-            bins = np.arange(
-                int(np.nanmin(energy_values)), int(np.nanmax(energy_values)) + 1
-            )
+            if self.nb_digitizer_bins == None:
+                bins = np.arange(
+                    int(np.nanmin(energy_values)), int(np.nanmax(energy_values)) + 1
+                )
+            else:
+                bins = np.arange(self.nb_digitizer_bins + 1)
 
         return np.histogram(energy_values, bins=bins)
 
@@ -106,41 +111,37 @@ class Detector:
         self,
         background_detector: "Detector",
         bins: Union[NDArray[np.float64], None] = None,
+        live_or_real: str = "live",
     ) -> Tuple[np.ndarray, np.ndarray]:
+        """Get the energy histogram of the detector events with background subtraction.
+
+        Args:
+            background_detector: _description_
+            bins: _description_. Defaults to None.
+            live_or_real: When doing the background sub decide whether the background
+                histogram is scaled by live or real count time.
+        """
 
         assert (
             self.channel_nb == background_detector.channel_nb
         ), f"Channel number mismatch: {self.channel_nb} != {background_detector.channel_nb}"
 
-        ps_to_seconds = 1e-12
         raw_hist, raw_bin_edges = self.get_energy_hist(bins=bins)
+        b_hist, _ = background_detector.get_energy_hist(bins=raw_bin_edges)
 
-        # If background spectrum and bin edges are already calculated, return them
-        if (
-            background_detector._spectrum is not None
-            and background_detector._bin_edges is not None
-        ):
-            raise ValueError("Background spectrum and bin edges must be calculated.")
-
-        background_times = background_detector.events[:, 0].copy()
-        background_energies = background_detector.events[:, 1].copy()
-
-        if self.real_count_time < background_detector.real_count_time:
-            # get background counts for the duration of the sample count
-            end_ind = np.nanargmin(
-                np.abs(
-                    self.real_count_time / ps_to_seconds
-                    - (background_times - background_times[0])
-                )
+        if live_or_real == "live":
+            # Scale background histogram by live count time
+            b_hist = b_hist * (
+                self.live_count_time / background_detector.live_count_time
             )
-            b_hist, _ = np.histogram(
-                background_energies[: end_ind + 1],
-                bins=raw_bin_edges,
-            )
-        else:
-            b_hist, _ = np.histogram(background_energies, bins=raw_bin_edges)
+        elif live_or_real == "real":
+            # Scale background histogram by real count time
             b_hist = b_hist * (
                 self.real_count_time / background_detector.real_count_time
+            )
+        else:
+            raise ValueError(
+                f"Invalid live_or_real value: {live_or_real}. Use 'live' or 'real'."
             )
 
         hist_background_substracted = raw_hist - b_hist
