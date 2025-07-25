@@ -938,26 +938,49 @@ def get_events(directory: str) -> Tuple[Dict[int, np.ndarray], Dict[int, np.ndar
         time_values[ch] = np.empty(0)
         energy_values[ch] = np.empty(0)
         for i, filename in enumerate(data_filenames[ch]):
+            print(f'Processing File {i}')
 
             # only the first file has a header
             if i == 0:
-                header = 0
+                # determine the column names
+                # 
+                # Typically, setting the header argument to 1
+                # would normally work, but on some CoMPASS csv
+                # files, specifically those with waveform data,
+                # the column header has far fewer entries
+                # than the number of columns in the csv file.
+                # This is due to the "SAMPLES" column, which 
+                # contains the waveform data actually being made
+                # up of the 7th-nth column of an n column csv file.
+                #
+                # So to mitigate this, we will read in the header
+                # manually and determine which column of 
+                # the dataset to read in. 
+                first_row_df = pd.read_csv(csv_file_path,
+                                           delimiter=";",
+                                           header=None,
+                                           nrows=1)
+                column_names = first_row_df.to_numpy()[0]
+                # Determine which column applies to time and energy
+                time_col = np.where(column_names=="TIMETAG")[0][0]
+                energy_col = np.where(column_names=="ENERGY")[0][0]
+                # First csv file has header, so skip it
+                # because we already read it in
+                skiprows=1
             else:
-                header = None
+                # For subsequent csv files, don't skip any rows
+                # as there won't be any header
+                skiprows=0
 
             csv_file_path = os.path.join(directory, filename)
 
-            df = pd.read_csv(csv_file_path, delimiter=";", header=header)
+            df = pd.read_csv(csv_file_path, 
+                             delimiter=";", 
+                             header=None,
+                             skiprows=skiprows)
 
-            # read the header and store in names
-            if i == 0:
-                names = df.columns.values
-            else:
-                # apply the column names if not the first file
-                df.columns = names
-
-            time_data = df["TIMETAG"].to_numpy()
-            energy_data = df["ENERGY"].to_numpy()
+            time_data = df[time_col].to_numpy()
+            energy_data = df[energy_col].to_numpy()
 
             # Extract and append the energy data to the list
             time_values[ch] = np.concatenate([time_values[ch], time_data])
