@@ -940,6 +940,8 @@ def get_events(directory: str) -> Tuple[Dict[int, np.ndarray], Dict[int, np.ndar
         for i, filename in enumerate(data_filenames[ch]):
             print(f'Processing File {i}')
 
+            csv_file_path = os.path.join(directory, filename)
+
             # only the first file has a header
             if i == 0:
                 # determine the column names
@@ -972,7 +974,6 @@ def get_events(directory: str) -> Tuple[Dict[int, np.ndarray], Dict[int, np.ndar
                 # as there won't be any header
                 skiprows=0
 
-            csv_file_path = os.path.join(directory, filename)
 
             df = pd.read_csv(csv_file_path, 
                              delimiter=";", 
