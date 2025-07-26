@@ -97,32 +97,35 @@ def test_sort_compass_files(tmpdir, base_name: str, expected_filenames: dict):
 
 
 @pytest.mark.parametrize(
-    "expected_time, expected_energy, expected_idx",
+    "waveform_directory, expected_time, expected_energy, expected_idx, expected_keys, test_ch",
     [
-        (6685836624, 515, 5),
-        (11116032249, 568, 6),
-        (1623550122, 589, -1),
-        (535148093, 1237, -2),
+        ("no_waveforms", 6685836624, 515, 5, [5, 15], 5),
+        ("no_waveforms", 11116032249, 568, 6, [5, 15], 5),
+        ("no_waveforms", 1623550122, 589, -1, [5, 15], 5),
+        ("no_waveforms", 535148093, 1237, -2, [5, 15], 5),
+        ("waveforms", 80413091, 1727, 0, [4], 4),
+        ("waveforms", 2850906749, 1539, 2, [4], 4),
+        ("waveforms", 14300873206559, 1700, 6, [4], 4)
     ],
 )
-def test_get_events(expected_time, expected_energy, expected_idx):
+def test_get_events_no_waveforms(waveform_directory, expected_time, 
+                                 expected_energy, expected_idx,
+                                 expected_keys, test_ch):
     """
     Test the get_events function from the compass module.
     Checks that specific time and energy values are returned for a given channel
     """
-    test_directory = Path(__file__).parent / "compass_test_data/events"
+    test_directory = Path(__file__).parent / "compass_test_data/events" / waveform_directory
     times, energies = compass.get_events(test_directory)
     assert isinstance(times, dict)
     assert isinstance(energies, dict)
 
-    expected_keys = [5, 15]
     for key in expected_keys:
         assert key in times
         assert key in energies
 
-    ch = 5
-    assert times[ch][expected_idx] == expected_time
-    assert energies[ch][expected_idx] == expected_energy
+    assert times[test_ch][expected_idx] == expected_time
+    assert energies[test_ch][expected_idx] == expected_energy
 
 
 utc_minus5 = datetime.timezone(datetime.timedelta(hours=-5))
