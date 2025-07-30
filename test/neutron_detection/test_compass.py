@@ -108,9 +108,9 @@ def test_sort_compass_files(tmpdir, base_name: str, expected_filenames: dict):
         ("waveforms", 14300873206559, 1700, 6, [4], 4)
     ],
 )
-def test_get_events_no_waveforms(waveform_directory, expected_time, 
-                                 expected_energy, expected_idx,
-                                 expected_keys, test_ch):
+def test_get_events(waveform_directory, expected_time, 
+                    expected_energy, expected_idx,
+                    expected_keys, test_ch):
     """
     Test the get_events function from the compass module.
     Checks that specific time and energy values are returned for a given channel
