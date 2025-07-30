@@ -169,6 +169,7 @@ class Measurement:
     stop_time: Union[datetime.datetime, None]
     name: str
     detectors: List[Detector]
+    detector_type: str = "NaI"  # Default detector type, can be 'NaI' or 'HPGe'
 
     def __init__(self, name: str) -> None:
         """
@@ -497,26 +498,57 @@ class CheckSourceMeasurement(Measurement):
             the peak indices in ``hist``
         """
 
-        # peak finding parameters
-        start_index = 100
-        prominence = 0.10 * np.max(hist[start_index:])
-        height = 0.10 * np.max(hist[start_index:])
-        width = [10, 150]
-        distance = 30
-        if self.check_source.nuclide == na22:
+        if self.detector_type.lower() == 'nai':
+            # peak finding parameters
             start_index = 100
-            height = 0.1 * np.max(hist[start_index:])
-            prominence = 0.1 * np.max(hist[start_index:])
+            prominence = 0.10 * np.max(hist[start_index:])
+            height = 0.10 * np.max(hist[start_index:])
             width = [10, 150]
             distance = 30
-        elif self.check_source.nuclide == co60:
-            start_index = 400
-            height = 0.60 * np.max(hist[start_index:])
-            prominence = None
-        elif self.check_source.nuclide == ba133:
-            width = [10, 200]
-        elif self.check_source.nuclide == mn54:
-            height = 0.6 * np.max(hist[start_index:])
+            if self.check_source.nuclide == na22:
+                start_index = 100
+                height = 0.1 * np.max(hist[start_index:])
+                prominence = 0.1 * np.max(hist[start_index:])
+                width = [10, 150]
+                distance = 30
+            elif self.check_source.nuclide == co60:
+                start_index = 400
+                height = 0.60 * np.max(hist[start_index:])
+                prominence = None
+            elif self.check_source.nuclide == ba133:
+                start_index = 10
+                height = 0.10 * np.max(hist[start_index:])
+                prominence = 0.10 * np.max(hist[start_index:])
+            elif self.check_source.nuclide == mn54:
+                height = 0.6 * np.max(hist[start_index:])
+        elif self.detector_type.lower() == 'hpge':
+            # peak finding parameters for HPGe detectors
+            start_index = 10
+            prominence = 0.10 * np.max(hist[start_index:])
+            height = 0.10 * np.max(hist[start_index:])
+            width = [2, 30]
+            distance = 10
+            if self.check_source.nuclide == na22:
+                start_index = 100
+                height = 0.2 * np.max(hist[start_index:])
+                prominence = 0.2 * np.max(hist[start_index:])
+                distance = 100
+            elif self.check_source.nuclide == co60:
+                height = 0.2 * np.max(hist[start_index:])
+                prominence = 0.2 * np.max(hist[start_index:])
+            elif self.check_source.nuclide == ba133:
+                start_index = 10
+                height = 0.10 * np.max(hist[start_index:])
+                prominence = 0.10 * np.max(hist[start_index:])
+                distance = 10
+            elif self.check_source.nuclide == mn54:
+                height = 0.9 * np.max(hist[start_index:])
+                prominence = 0.9 * np.max(hist[start_index:])
+                distance = 100
+        else:
+            raise ValueError(
+                f"Unknown detector type: {self.detector_type}. Supported types are 'NaI' and 'HPGe'."
+            )
 
         # update the parameters if kwargs are provided
         if kwargs:
@@ -735,7 +767,8 @@ def get_calibration_data(
 
             if len(peaks) != len(measurement.check_source.nuclide.energy):
                 raise ValueError(
-                    f"SciPy find_peaks() found {len(peaks)} photon peaks, while {len(measurement.check_source.nuclide.energy)} were expected"
+                    f"SciPy find_peaks() found {len(peaks)} photon peaks, while {len(measurement.check_source.nuclide.energy)} were expected",
+                    f" peaks found: {peaks} for {measurement.check_source.nuclide.name}",
                 )
             calibration_channels += list(peaks)
             calibration_energies += measurement.check_source.nuclide.energy
