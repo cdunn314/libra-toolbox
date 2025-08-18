@@ -416,6 +416,7 @@ class CheckSourceMeasurement(Measurement):
         calibration_coeffs: np.ndarray,
         channel_nb: int,
         search_width: float = 800,
+        threshold_overlap: float = 200,
     ) -> Union[np.ndarray, float]:
         """
         Computes the detection efficiency of a check source given the
@@ -448,12 +449,17 @@ class CheckSourceMeasurement(Measurement):
         )
 
         calibrated_bin_edges = np.polyval(calibration_coeffs, bin_edges)
+        # width_calibration_coeffs = np.append(calibration_coeffs[:-1], 0)
+        # self.check_source.nuclide.calibrated_peak_widths = np.polyval(calibration_coeffs,
+        #                                                               self.check_source.nuclide.calibrated_peak_widths)
+        print('libra-toolbox search_width:', search_width, ' threshold_overlap:', threshold_overlap)
 
         nb_counts_measured = get_multipeak_area(
             hist,
             calibrated_bin_edges,
             self.check_source.nuclide.energy,
             search_width=search_width,
+            threshold_overlap=threshold_overlap,
         )
 
         nb_counts_measured = np.array(nb_counts_measured)
@@ -537,7 +543,7 @@ class CheckSourceMeasurement(Measurement):
                 height = 0.2 * np.max(hist[start_index:])
                 prominence = 0.2 * np.max(hist[start_index:])
             elif self.check_source.nuclide == ba133:
-                start_index = 10
+                start_index = 150
                 height = 0.10 * np.max(hist[start_index:])
                 prominence = 0.10 * np.max(hist[start_index:])
                 distance = 10
@@ -804,17 +810,18 @@ def fit_peak_gauss(hist, xvals, peak_ergs, search_width=600, threshold_overlap=2
             )
 
     search_start = np.argmin(
-        np.abs((peak_ergs[0] - search_width / (2 * len(peak_ergs))) - xvals)
+        np.abs((peak_ergs[0] - search_width / ( len(peak_ergs))) - xvals)
     )
     search_end = np.argmin(
-        np.abs((peak_ergs[-1] + search_width / (2 * len(peak_ergs))) - xvals)
+        np.abs((peak_ergs[-1] + search_width / (len(peak_ergs))) - xvals)
     )
 
     slope_guess = (hist[search_end] - hist[search_start]) / (
         xvals[search_end] - xvals[search_start]
     )
 
-    guess_parameters = [0, slope_guess]
+    # guess_parameters = [0, slope_guess]
+    guess_parameters = [0, 0]
 
     for i in range(len(peak_ergs)):
         peak_ind = np.argmin(np.abs((peak_ergs[i]) - xvals))
@@ -823,6 +830,8 @@ def fit_peak_gauss(hist, xvals, peak_ergs, search_width=600, threshold_overlap=2
             peak_ergs[i],
             search_width / (3 * len(peak_ergs)),
         ]
+
+    print('Search start:', search_start, ' Search end:', search_end)
 
     parameters, covariance = curve_fit(
         gauss,
@@ -841,19 +850,31 @@ def get_multipeak_area(
     if len(peak_ergs) > 1:
         if np.max(peak_ergs) - np.min(peak_ergs) > threshold_overlap:
             areas = []
-            for peak in peak_ergs:
+            for p, peak in enumerate(peak_ergs):
+                if isinstance(search_width, (np.ndarray, list)):
+                    search_w = int(search_width[p])
+                else:
+                    search_w = int(search_width)
                 area = get_multipeak_area(
                     hist,
                     bins,
                     [peak],
-                    search_width=search_width,
+                    search_width=search_w,
                     threshold_overlap=threshold_overlap,
                 )
                 areas += area
             return areas
+    
+    if isinstance(search_width, (np.ndarray, list)):
+        search_width = int(search_width[0])
 
     # get midpoints of every bin
     xvals = np.diff(bins) / 2 + bins[:-1]
+
+    print("libra-toolbox bins length:", len(bins))
+    print("libra-toolbox xvals:", xvals)
+    print("libra-toolbox hist[0, -1]: ", hist[0], hist[-1])
+    print("libra-toolbox peak_ergs:", peak_ergs)
 
     parameters, covariance = fit_peak_gauss(
         hist, xvals, peak_ergs, search_width=search_width
