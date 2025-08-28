@@ -415,6 +415,7 @@ class CheckSourceMeasurement(Measurement):
         calibration_coeffs: np.ndarray,
         channel_nb: int,
         search_width: float = 800,
+        compute_error: bool = False
     ) -> Union[np.ndarray, float]:
         """
         Computes the detection efficiency of a check source given the
@@ -456,7 +457,6 @@ class CheckSourceMeasurement(Measurement):
         )
 
         nb_counts_measured = np.array(nb_counts_measured)
-        nb_counts_measured_err = np.sqrt(nb_counts_measured)
 
         # assert that all numbers in nb_counts_measured are > 0
         assert np.all(
@@ -483,7 +483,23 @@ class CheckSourceMeasurement(Measurement):
 
         detection_efficiency = nb_counts_measured / expected_nb_counts
 
-        return detection_efficiency
+        if compute_error:
+            nb_counts_measured_err = np.sqrt(nb_counts_measured)
+            act_expec_err = self.check_source.get_expected_activity_error(self.start_time)
+            gamma_rays_expected_err = act_expec_err * (
+                np.array(self.check_source.nuclide.intensity)
+            )
+            expected_nb_counts_err = gamma_rays_expected_err / decay_constant
+            expected_nb_counts_err *= (
+                live_count_time_correction_factor * decay_counting_correction_factor
+            )
+            detection_efficiency_err = detection_efficiency * np.sqrt(
+                (nb_counts_measured_err / nb_counts_measured) ** 2 +
+                (expected_nb_counts_err / expected_nb_counts) ** 2
+            )
+            return detection_efficiency, detection_efficiency_err
+        else:
+            return detection_efficiency
 
     def get_peaks(self, hist: np.ndarray, **kwargs) -> np.ndarray:
         """Returns the peak indices of the histogram
