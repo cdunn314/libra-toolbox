@@ -485,6 +485,7 @@ class CheckSourceMeasurement(Measurement):
 
         if compute_error:
             nb_counts_measured_err = np.sqrt(nb_counts_measured)
+
             act_expec_err = self.check_source.get_expected_activity_error(self.start_time)
             gamma_rays_expected_err = act_expec_err * (
                 np.array(self.check_source.nuclide.intensity)
@@ -493,6 +494,7 @@ class CheckSourceMeasurement(Measurement):
             expected_nb_counts_err *= (
                 live_count_time_correction_factor * decay_counting_correction_factor
             )
+            
             detection_efficiency_err = detection_efficiency * np.sqrt(
                 (nb_counts_measured_err / nb_counts_measured) ** 2 +
                 (expected_nb_counts_err / expected_nb_counts) ** 2
@@ -566,6 +568,8 @@ class SampleMeasurement(Measurement):
         calibration_coeffs,
         channel_nb: int,
         search_width: float = 800,
+        detection_efficiency: float = None,
+        detection_efficiency_err: float = 0.0,
     ):
         # find right background detector
 
@@ -590,10 +594,15 @@ class SampleMeasurement(Measurement):
         nb_counts_measured = np.array(nb_counts_measured)
         nb_counts_measured_err = np.sqrt(nb_counts_measured)
 
-        detection_efficiency = np.polyval(efficiency_coeffs, energy)
+        if detection_efficiency is None:
+            detection_efficiency = np.polyval(efficiency_coeffs, energy)
 
         gamma_emmitted = nb_counts_measured / detection_efficiency
-        gamma_emmitted_err = nb_counts_measured_err / detection_efficiency
+        gamma_emmitted_err = gamma_emmitted * np.sqrt(
+            (nb_counts_measured_err / nb_counts_measured) ** 2
+            + (detection_efficiency_err / detection_efficiency) ** 2
+        )
+        
         return gamma_emmitted, gamma_emmitted_err
 
     def get_neutron_flux(
