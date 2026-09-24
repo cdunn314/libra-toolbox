@@ -1,3 +1,7 @@
 from .neutron_source import *
 from .vault import *
-from . import materials
+
+try:
+    from . import materials
+except ModuleNotFoundError:
+    pass
