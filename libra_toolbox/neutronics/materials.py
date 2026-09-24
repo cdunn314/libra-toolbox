@@ -1,4 +1,7 @@
-import openmc
+try:
+    import openmc
+except ModuleNotFoundError:
+    raise ModuleNotFoundError("openmc is required for neutronics.materials")
 
 
 def get_exp_cllif_density(temp, LiCl_frac=0.695):
